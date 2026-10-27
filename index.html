@@ -235,93 +235,96 @@ const CANVAS = 460;
 const KOP = 'import turtle\nt = turtle.Turtle()\nt.shape("turtle")\n\n';
 const LESSEN = [
 { id:'l01', titel:'Hallo schildpad',
-  uitleg:'<p>De schildpad is een pen. Met <code>t.forward(100)</code> loopt hij 100 stapjes vooruit en trekt hij een lijn. Met <code>t.backward(50)</code> loopt hij achteruit.</p><p>De eerste twee regels moeten altijd bovenaan staan: ze maken de schildpad <code>t</code>.</p>',
-  opdracht:'Druk op ▶ Uitvoeren. Maak de lijn daarna 200 stapjes lang. Laat hem dan 50 stapjes achteruit lopen.',
+  uitleg:'<p>De schildpad is een pen. Met <code>t.forward(100)</code> loopt hij 100 stapjes vooruit en trekt hij een lijn. Met <code>t.backward(50)</code> loopt hij achteruit.</p><p>De regels die al in je code staan, moeten altijd bovenaan blijven: ze maken de schildpad <code>t</code>.</p>',
+  opdracht:'Laat de schildpad een lijn van 200 stapjes trekken. Laat hem daarna 50 stapjes achteruit lopen.',
   uitdaging:'Hoe ver kan de schildpad lopen voordat hij uit beeld verdwijnt?',
-  start: KOP + 't.forward(100)\n' },
+  start: KOP },
 { id:'l02', titel:'Draaien',
-  uitleg:'<p><code>t.left(90)</code> draait de schildpad een kwartslag naar links. <code>t.right(90)</code> een kwartslag naar rechts. Het getal is het aantal <b>graden</b>: een hele rondje is 360.</p>',
-  voorbeeld:'t.forward(100)\nt.left(90)\nt.forward(50)',
-  opdracht:'Teken de letter <b>L</b>: eerst een lijn omhoog-naar-beneden, dan een korte lijn opzij.',
+  uitleg:'<p><code>t.left(90)</code> draait de schildpad een kwartslag naar links. <code>t.right(90)</code> een kwartslag naar rechts. Het getal is het aantal <b>graden</b>: een heel rondje is 360.</p><p>Draaien tekent niks. Pas als de schildpad daarna weer loopt, zie je de hoek.</p>',
+  voorbeeld:'t.left(90)    # kwartslag naar links\nt.right(45)   # halve kwartslag naar rechts',
+  opdracht:'Teken de letter <b>L</b>: een lange lijn, dan draaien, dan een korte lijn.',
   uitdaging:'Teken een trap met 4 treden.',
-  start: KOP + 't.forward(100)\nt.left(90)\n' },
+  start: KOP },
 { id:'l03', titel:'Het vierkant',
   uitleg:'<p>Een vierkant heeft 4 even lange kanten en 4 hoeken van 90 graden. Dus: vooruit, draai, vooruit, draai…</p>',
   opdracht:'Maak een vierkant met kanten van 100.',
   uitdaging:'Maak een rechthoek van 150 breed en 60 hoog.',
-  start: KOP + 't.forward(100)\nt.left(90)\n' },
+  start: KOP },
 { id:'l04', titel:'Herhalen met for',
-  uitleg:'<p>Bij het vierkant typte je 4 keer hetzelfde. Dat kan slimmer! Met <code>for</code> herhaal je regels.</p><p>Let op de <b>dubbele punt</b> <code>:</code> en dat de regels eronder <b>4 spaties</b> inspringen. Alles wat inspringt, wordt herhaald.</p>',
-  voorbeeld:'for i in range(4):\n    t.forward(100)\n    t.left(90)',
-  opdracht:'Maak het vierkant nu met een <code>for</code>-lus. Hoeveel regels heb je nu nodig?',
+  uitleg:'<p>Bij het vierkant typte je 4 keer hetzelfde. Dat kan slimmer! Met <code>for</code> herhaal je regels.</p><p>Let op de <b>dubbele punt</b> <code>:</code> en dat de regels eronder <b>4 spaties</b> inspringen. Alles wat inspringt, wordt herhaald. Dit voorbeeld maakt een trap van 5 treden:</p>',
+  voorbeeld:'for i in range(5):\n    t.forward(30)\n    t.left(90)\n    t.forward(30)\n    t.right(90)',
+  opdracht:'Maak het vierkant van les 3 nu met een <code>for</code>-lus. Hoeveel regels heb je nu nodig?',
   uitdaging:'Zet een tweede lus om je vierkant heen: teken 36 vierkanten en draai na elk vierkant <code>t.left(10)</code>. Tip: <code>t.speed(0)</code> maakt de schildpad supersnel.',
-  start: KOP + 'for i in range(4):\n    t.forward(100)\n' },
+  start: KOP },
 { id:'l05', titel:'Driehoek, zeshoek…',
-  uitleg:'<p>De schildpad draait in totaal altijd één heel rondje: <b>360 graden</b>. Bij een vorm met 3 hoeken draait hij dus 3 keer 360 ÷ 3 = 120 graden.</p>',
-  voorbeeld:'for i in range(3):\n    t.forward(100)\n    t.left(120)',
-  opdracht:'Maak een driehoek. Maak daarna een zeshoek (6 hoeken). Hoeveel graden moet hij dan draaien?',
+  uitleg:'<p>De schildpad draait in totaal altijd één heel rondje: <b>360 graden</b>. Bij een vierkant draait hij 4 keer, dus elke keer 360 ÷ 4 = 90 graden. Python kan dat zelf uitrekenen:</p>',
+  voorbeeld:'for i in range(4):\n    t.forward(100)\n    t.left(360 / 4)',
+  opdracht:'Maak een <b>driehoek</b> én een <b>zeshoek</b>, allebei met een <code>for</code>-lus. Hoeveel graden moet de schildpad steeds draaien?',
   uitdaging:'Maak een 36-hoek met kleine stapjes. Op welke vorm lijkt dat?',
-  start: KOP + 'for i in range(3):\n    t.forward(100)\n    t.left(120)\n' },
+  start: KOP },
 { id:'l06', titel:'Kleur en dikte',
   uitleg:'<p>Met <code>t.color("red")</code> kies je een kleur, met <code>t.pensize(5)</code> een dikkere pen. Engelse kleurnamen: red, blue, green, yellow, orange, purple, black, brown, pink, gray.</p>',
   voorbeeld:'t.color("blue")\nt.pensize(6)\nt.forward(100)',
   opdracht:'Teken een vierkant waarbij elke kant een andere kleur heeft.',
   uitdaging:'Maak een regenboog-zeshoek met 6 kleuren en een dikke pen.',
-  start: KOP + 't.color("blue")\nt.pensize(6)\nt.forward(100)\n' },
+  start: KOP },
 { id:'l07', titel:'Pen op, pen neer',
   uitleg:'<p><code>t.penup()</code> tilt de pen op: de schildpad loopt zonder te tekenen. <code>t.pendown()</code> zet hem weer neer.</p><p>Met <code>t.goto(x, y)</code> spring je naar een plek. Het midden is <code>(0, 0)</code>. Rechts is x positief, omhoog is y positief.</p>',
   voorbeeld:'t.penup()\nt.goto(-150, 100)\nt.pendown()\nt.forward(50)',
   opdracht:'Teken drie vierkanten naast elkaar, zonder lijnen ertussen.',
   uitdaging:'Teken een smiley: twee ogen en een mond op de goede plek.',
-  start: KOP + 't.penup()\nt.goto(-150, 100)\nt.pendown()\n' },
+  start: KOP },
 { id:'l08', titel:'Inkleuren',
-  uitleg:'<p>Wil je een vorm vol kleuren? Zet <code>t.begin_fill()</code> vóór de vorm en <code>t.end_fill()</code> erachter. Met <code>t.fillcolor("yellow")</code> kies je de vulkleur.</p>',
-  voorbeeld:'t.fillcolor("yellow")\nt.begin_fill()\nfor i in range(4):\n    t.forward(100)\n    t.left(90)\nt.end_fill()',
-  opdracht:'Maak een gevuld geel vierkant.',
+  uitleg:'<p>Wil je een vorm vol kleuren? Zet <code>t.begin_fill()</code> vóór de vorm en <code>t.end_fill()</code> erachter. Met <code>t.fillcolor("red")</code> kies je de vulkleur. Dit voorbeeld maakt een rode driehoek:</p>',
+  voorbeeld:'t.fillcolor("red")\nt.begin_fill()\nfor i in range(3):\n    t.forward(80)\n    t.left(120)\nt.end_fill()',
+  opdracht:'Maak een gevuld <b>geel vierkant</b>.',
   uitdaging:'Teken een huis: een gevuld vierkant met een rood dak (driehoek) erop.',
-  start: KOP + 't.fillcolor("yellow")\nt.begin_fill()\n\nt.end_fill()\n' },
+  start: KOP },
 { id:'l09', titel:'Variabelen',
-  uitleg:'<p>Een <b>variabele</b> is een doosje met een naam waar je iets in bewaart. <code>zijde = 80</code> stopt het getal 80 in het doosje <code>zijde</code>. Daarna kun je overal <code>zijde</code> gebruiken.</p>',
+  uitleg:'<p>Een <b>variabele</b> is een doosje met een naam waar je iets in bewaart. <code>zijde = 80</code> stopt het getal 80 in het doosje <code>zijde</code>. Daarna kun je overal <code>zijde</code> gebruiken, en hoef je het getal maar op één plek te veranderen.</p>',
   voorbeeld:'zijde = 80\nfor i in range(4):\n    t.forward(zijde)\n    t.left(90)',
-  opdracht:'Verander alleen het getal bij <code>zijde</code> en voer opnieuw uit. Wat gebeurt er?',
+  opdracht:'Maak een variabele <code>grootte</code> en teken een <b>driehoek</b> met kanten van <code>grootte</code>. Verander daarna het getal een paar keer.',
   uitdaging:'Maak ook een variabele <code>hoeken = 5</code> en laat de draaihoek uitrekenen met <code>360 / hoeken</code>.',
-  start: KOP + 'zijde = 80\nfor i in range(4):\n    t.forward(zijde)\n    t.left(90)\n' },
+  start: KOP },
 { id:'l10', titel:'Je eigen commando',
-  uitleg:'<p>Met <code>def</code> maak je een eigen commando (een <b>functie</b>). Daarna hoef je alleen nog de naam te typen.</p><p>Weer: dubbele punt en inspringen!</p>',
-  voorbeeld:'def vierkant():\n    for i in range(4):\n        t.forward(50)\n        t.left(90)\n\nvierkant()',
+  uitleg:'<p>Met <code>def</code> maak je een eigen commando (een <b>functie</b>). Daarna hoef je alleen nog de naam te typen. Dit voorbeeld maakt het commando <code>trede()</code>:</p><p>Weer: dubbele punt en inspringen!</p>',
+  voorbeeld:'def trede():\n    t.forward(20)\n    t.left(90)\n    t.forward(20)\n    t.right(90)\n\ntrede()\ntrede()',
   opdracht:'Maak het commando <code>vierkant()</code> en teken er drie, met <code>t.penup()</code> en <code>t.forward()</code> ertussen.',
   uitdaging:'Maak ook een commando <code>driehoek()</code> en gebruik ze samen voor een huisje.',
-  start: KOP + 'def vierkant():\n    for i in range(4):\n        t.forward(50)\n        t.left(90)\n\nvierkant()\n' },
+  start: KOP },
 { id:'l11', titel:'Commando met een getal',
-  uitleg:'<p>Je kunt je commando een getal meegeven. Bij <code>def vierkant(zijde):</code> komt het getal tussen de haakjes in het doosje <code>zijde</code>.</p>',
-  voorbeeld:'def vierkant(zijde):\n    for i in range(4):\n        t.forward(zijde)\n        t.left(90)\n\nvierkant(30)\nvierkant(60)\nvierkant(90)',
-  opdracht:'Teken 5 vierkanten die steeds groter worden.',
-  uitdaging:'Gebruik een <code>for</code>-lus: <code>for i in range(10): vierkant(i * 15)</code>',
-  start: KOP + 'def vierkant(zijde):\n    for i in range(4):\n        t.forward(zijde)\n        t.left(90)\n\nvierkant(30)\n' },
+  uitleg:'<p>Je kunt je commando een getal meegeven. Bij <code>def lijn(lengte):</code> komt het getal tussen de haakjes in het doosje <code>lengte</code>.</p>',
+  voorbeeld:'def lijn(lengte):\n    t.forward(lengte)\n    t.penup()\n    t.forward(10)\n    t.pendown()\n\nlijn(20)\nlijn(50)',
+  opdracht:'Maak <code>def vierkant(zijde):</code> en teken 5 vierkanten die steeds groter worden.',
+  uitdaging:'Gebruik een <code>for</code>-lus om je vierkanten te tekenen: <code>vierkant(i * 15)</code>',
+  start: KOP },
 { id:'l12', titel:'De kanteel',
-  uitleg:'<p>Bovenop een kasteelmuur zitten <b>kantelen</b>: steeds een blokje omhoog en weer omlaag. Wie dat met de hand typt, heeft heel veel regels nodig!</p><p>Slim trucje: <code>t.left(270)</code> is precies hetzelfde als <code>t.right(90)</code>. Korter én duidelijker.</p>',
-  voorbeeld:'def kanteel():\n    t.left(90)\n    t.forward(30)\n    t.right(90)\n    t.forward(30)\n    t.right(90)\n    t.forward(30)\n    t.left(90)\n    t.forward(30)\n\nfor i in range(5):\n    kanteel()',
-  opdracht:'Maak een rij van 5 kantelen met je eigen commando <code>kanteel()</code>.',
+  uitleg:'<p>Bovenop een kasteelmuur zitten <b>kantelen</b>: steeds een blokje omhoog en weer omlaag. Hieronder staan de 8 regels voor <b>één</b> kanteel. Voor een hele muur zou je die heel vaak moeten typen…</p><p>Slim trucje: <code>t.left(270)</code> is precies hetzelfde als <code>t.right(90)</code>. Korter én duidelijker.</p>',
+  voorbeeld:'t.left(90)\nt.forward(30)\nt.right(90)\nt.forward(30)\nt.right(90)\nt.forward(30)\nt.left(90)\nt.forward(30)',
+  opdracht:'Stop deze regels in je eigen commando <code>kanteel()</code> en maak met een <code>for</code>-lus een rij van 5 kantelen.',
   uitdaging:'Geef <code>kanteel(maat)</code> een getal mee, zodat je grote en kleine kantelen kunt maken.',
-  start: KOP + 't.penup()\nt.goto(-150, 0)\nt.pendown()\n\ndef kanteel():\n    t.left(90)\n    t.forward(30)\n    t.right(90)\n    t.forward(30)\n    t.right(90)\n    t.forward(30)\n    t.left(90)\n    t.forward(30)\n\nkanteel()\n' },
+  start: KOP + 't.penup()\nt.goto(-150, 0)\nt.pendown()\n\n' },
 { id:'l13', titel:'Bouw je kasteel',
-  uitleg:'<p>Eindproject! Gebruik alles wat je kunt: functies, lussen, <code>goto</code>, kleuren en inkleuren.</p><p>Maak bijvoorbeeld de commando’s <code>muur()</code>, <code>toren()</code>, <code>poort()</code> en <code>vlag()</code>.</p>',
+  uitleg:'<p>Eindproject! Gebruik alles wat je kunt: functies, lussen, <code>goto</code>, kleuren en inkleuren.</p><p>Maak bijvoorbeeld de commando’s <code>muur()</code>, <code>toren()</code>, <code>poort()</code> en <code>vlag()</code>. Dit hulpcommando is handig om te springen:</p>',
+  voorbeeld:'def naar(x, y):\n    t.penup()\n    t.goto(x, y)\n    t.pendown()\n\nnaar(-150, -150)   # spring naar linksonder',
   opdracht:'Bouw een kasteel met een muur met kantelen, minstens twee torens en een gevulde poort.',
   uitdaging:'Voeg een vlag, ramen, een slotgracht (blauw) of de lucht met een zon toe.',
-  start: KOP + 't.speed(0)\n\ndef kanteel():\n    t.left(90)\n    t.forward(20)\n    t.right(90)\n    t.forward(20)\n    t.right(90)\n    t.forward(20)\n    t.left(90)\n    t.forward(20)\n\ndef naar(x, y):\n    t.penup()\n    t.goto(x, y)\n    t.pendown()\n\n# Muur\nnaar(-150, -150)\n\n# Torens\n\n# Poort\n\n' },
+  start: KOP + 't.speed(0)\n\n# Muur\n\n# Torens\n\n# Poort\n\n' },
 { id:'l14', titel:'Spiralen', ster:true,
   uitleg:'<p>Als de schildpad bij elke stap een beetje verder loopt, krijg je een spiraal. <code>i</code> telt mee in de lus: 0, 1, 2, 3…</p><p>Met een <b>lijst</b> kleuren en <code>i % 4</code> wissel je steeds van kleur.</p>',
   voorbeeld:'t.speed(0)\nkleuren = ["red", "orange", "green", "blue"]\nfor i in range(120):\n    t.color(kleuren[i % 4])\n    t.forward(i * 2)\n    t.left(91)',
-  opdracht:'Voer het voorbeeld uit. Verander 91 in 89, 120 of 144. Wat zie je?',
+  opdracht:'Typ het voorbeeld over en voer het uit. Verander daarna 91 in 89, 120 of 144. Wat zie je?',
   uitdaging:'Maak een spiraal met 6 kleuren en draai 59 graden.',
-  start: KOP + 't.speed(0)\nkleuren = ["red", "orange", "green", "blue"]\nfor i in range(120):\n    t.color(kleuren[i % 4])\n    t.forward(i * 2)\n    t.left(91)\n' },
+  start: KOP + 't.speed(0)\n\n' },
 { id:'l15', titel:'Cirkels en bloemen', ster:true,
-  uitleg:'<p><code>t.circle(50)</code> tekent een cirkel. Als je steeds een stukje draait en een nieuwe cirkel tekent, krijg je een bloem.</p>',
-  voorbeeld:'t.speed(0)\nfor i in range(12):\n    t.circle(60)\n    t.left(30)',
-  opdracht:'Maak een bloem van 12 cirkels. Hoeveel graden moet je draaien voor 18 cirkels?',
+  uitleg:'<p><code>t.circle(50)</code> tekent een cirkel. Draai je een stukje en teken je nog een cirkel, dan krijg je twee rondjes over elkaar. Met een <code>for</code>-lus wordt dat een bloem.</p>',
+  voorbeeld:'t.circle(50)\nt.left(90)\nt.circle(50)',
+  opdracht:'Maak met een <code>for</code>-lus een bloem van 12 cirkels. Hoeveel graden moet de schildpad steeds draaien?',
   uitdaging:'Maak een bloemenveld: een functie <code>bloem(x, y, kleur)</code> en teken er 5 op verschillende plekken, met een steel.',
-  start: KOP + 't.speed(0)\nt.circle(60)\n' },
+  start: KOP + 't.speed(0)\n\n' },
 ];
+// startcode van eerdere versies: nog onaangeroerd? Dan vervangen door de nieuwe (lege) start
+const OUDE_STARTS = {"l01": ["import turtle\nt = turtle.Turtle()\nt.shape(\"turtle\")\n\nt.forward(100)\n"], "l02": ["import turtle\nt = turtle.Turtle()\nt.shape(\"turtle\")\n\nt.forward(100)\nt.left(90)\n", "import turtle\nt = turtle.Turtle()\nt.shape(\"turtle\")\n\nt.forward(100)\nt.left(90)\nt.forward(50)\n"], "l03": ["import turtle\nt = turtle.Turtle()\nt.shape(\"turtle\")\n\nt.forward(100)\nt.left(90)\n"], "l04": ["import turtle\nt = turtle.Turtle()\nt.shape(\"turtle\")\n\nfor i in range(4):\n    t.forward(100)\n"], "l05": ["import turtle\nt = turtle.Turtle()\nt.shape(\"turtle\")\n\nfor i in range(3):\n    t.forward(100)\n    t.left(120)\n"], "l06": ["import turtle\nt = turtle.Turtle()\nt.shape(\"turtle\")\n\nt.color(\"blue\")\nt.pensize(6)\nt.forward(100)\n"], "l07": ["import turtle\nt = turtle.Turtle()\nt.shape(\"turtle\")\n\nt.penup()\nt.goto(-150, 100)\nt.pendown()\n"], "l08": ["import turtle\nt = turtle.Turtle()\nt.shape(\"turtle\")\n\nt.fillcolor(\"yellow\")\nt.begin_fill()\n\nt.end_fill()\n"], "l09": ["import turtle\nt = turtle.Turtle()\nt.shape(\"turtle\")\n\nzijde = 80\nfor i in range(4):\n    t.forward(zijde)\n    t.left(90)\n"], "l10": ["import turtle\nt = turtle.Turtle()\nt.shape(\"turtle\")\n\ndef vierkant():\n    for i in range(4):\n        t.forward(50)\n        t.left(90)\n\nvierkant()\n"], "l11": ["import turtle\nt = turtle.Turtle()\nt.shape(\"turtle\")\n\ndef vierkant(zijde):\n    for i in range(4):\n        t.forward(zijde)\n        t.left(90)\n\nvierkant(30)\n"], "l12": ["import turtle\nt = turtle.Turtle()\nt.shape(\"turtle\")\n\nt.penup()\nt.goto(-150, 0)\nt.pendown()\n\ndef kanteel():\n    t.left(90)\n    t.forward(30)\n    t.right(90)\n    t.forward(30)\n    t.right(90)\n    t.forward(30)\n    t.left(90)\n    t.forward(30)\n\nkanteel()\n"], "l13": ["import turtle\nt = turtle.Turtle()\nt.shape(\"turtle\")\n\nt.speed(0)\n\ndef kanteel():\n    t.left(90)\n    t.forward(20)\n    t.right(90)\n    t.forward(20)\n    t.right(90)\n    t.forward(20)\n    t.left(90)\n    t.forward(20)\n\ndef naar(x, y):\n    t.penup()\n    t.goto(x, y)\n    t.pendown()\n\n# Muur\nnaar(-150, -150)\n\n# Torens\n\n# Poort\n\n"], "l14": ["import turtle\nt = turtle.Turtle()\nt.shape(\"turtle\")\n\nt.speed(0)\nkleuren = [\"red\", \"orange\", \"green\", \"blue\"]\nfor i in range(120):\n    t.color(kleuren[i % 4])\n    t.forward(i * 2)\n    t.left(91)\n"], "l15": ["import turtle\nt = turtle.Turtle()\nt.shape(\"turtle\")\n\nt.speed(0)\nt.circle(60)\n", "import turtle\nt = turtle.Turtle()\nt.shape(\"turtle\")\n\nt.speed(0)\nfor i in range(12):\n    t.circle(60)\n    t.left(30)\n"]};
 const VRIJ_START = KOP + '# Teken hier wat je maar wilt!\n';
 
 /* =====================================================================
@@ -435,9 +438,10 @@ const CHECKS = {
         : A.regelmatig(4).length ? { ok: true } : { tip: 'De lus is er, maar er komt nog geen vierkant uit. Staan <code>forward</code> én <code>left</code> allebei ingesprongen onder de <code>for</code>?' },
   l05: A => {
     const zes = A.regelmatig(6).length, drie = A.regelmatig(3).length;
-    if (zes && A.heeft(FOR)) return { ok: true };
-    if (zes) return { tip: 'Zeshoek gelukt! Kun je hem ook maken met een <code>for</code>-lus?' };
+    if (!A.heeft(FOR)) return { tip: 'Gebruik een <code>for</code>-lus voor je vormen.' };
+    if (zes && drie) return { ok: true };
     if (drie) return { tip: 'Driehoek gelukt! Maak nu ook de zeshoek. Hoeveel is 360 ÷ 6?' };
+    if (zes) return { tip: 'Zeshoek gelukt! Maak nu ook de driehoek. Hoeveel is 360 ÷ 3?' };
     return { tip: 'Ik zie nog geen driehoek of zeshoek. Tip: de schildpad draait 360 ÷ het aantal hoeken.' };
   },
   l06: A => {
@@ -458,11 +462,14 @@ const CHECKS = {
     return v.some(x => /yellow|gold|ff0|ffff00|255, ?255, ?0/i.test(x.kleur)) ? { ok: true } : { tip: 'Ingekleurd! Maar de opdracht was geel: <code>t.fillcolor("yellow")</code>.' };
   },
   l09: A => {
-    const m = [...A.code.matchAll(/\bzijde\s*=\s*(\d+(?:\.\d+)?)/g)].pop();
-    if (!m) return { tip: 'Gebruik de variabele: <code>zijde = ...</code>' };
-    const z = parseFloat(m[1]);
-    if (z === 80) return { tip: 'Verander het getal achter <code>zijde =</code> in een ander getal en voer opnieuw uit.' };
-    return A.regelmatig(4).some(v => Math.abs(v.gem - z) <= 3) ? { ok: true } : { tip: 'Gebruik je <code>t.forward(zijde)</code> in de lus? Het vierkant moet even groot worden als <code>zijde</code>.' };
+    const vars = [...A.code.matchAll(/^\s*([a-zA-Z_]\w*)\s*=\s*(\d+(?:\.\d+)?)\s*$/gm)].map(m => ({ naam: m[1], waarde: parseFloat(m[2]) }));
+    if (!vars.length) return { tip: 'Maak eerst een variabele, bijvoorbeeld <code>grootte = 100</code>.' };
+    const gebruikt = vars.filter(v => new RegExp('forward\\s*\\(\\s*' + v.naam + '\\s*\\)').test(A.code));
+    if (!gebruikt.length) return { tip: 'Gebruik je variabele in de schildpad-opdracht: <code>t.forward(grootte)</code>.' };
+    const drie = A.regelmatig(3);
+    if (!drie.length) return { tip: 'Ik zie nog geen driehoek. Herhaal 3 keer: vooruit en 120 graden draaien.' };
+    return drie.some(d => gebruikt.some(v => Math.abs(d.gem - v.waarde) <= 3)) ? { ok: true }
+      : { tip: 'De driehoek is er, maar de kanten zijn niet zo lang als je variabele.' };
   },
   l10: A => {
     if (!A.defs.length) return { tip: 'Maak je eigen commando met <code>def vierkant():</code>' };
@@ -486,7 +493,7 @@ const CHECKS = {
     return { ok: true, extra: 'Laat je kasteel ook even aan je juf of meester zien!' };
   },
   l14: (A, les) => {
-    if (zonderSpaties(A.code) === zonderSpaties(les.start.split('\n').map(r => r.replace(/#.*$/, '')).join('\n'))) return { tip: 'Verander eerst een getal, bijvoorbeeld 91 in 89, en kijk wat er gebeurt.' };
+    if (zonderSpaties(A.code).includes(zonderSpaties(les.voorbeeld))) return { tip: 'Het voorbeeld werkt! Verander nu een getal, bijvoorbeeld 91 in 89, en kijk wat er gebeurt.' };
     return A.lijnen.length >= 50 && A.heeft(FOR) ? { ok: true } : { tip: 'Ik zie nog geen spiraal. Gebruik een <code>for</code>-lus waarin de schildpad steeds een stukje verder loopt.' };
   },
   l15: A => A.cirkels >= 12 && A.heeft(FOR) ? { ok: true } : { tip: `Ik tel ${A.cirkels} cirkel${A.cirkels === 1 ? '' : 's'}. Een bloem heeft er minstens 12, gemaakt met een <code>for</code>-lus.` }
@@ -617,7 +624,8 @@ async function openItem(type, id){
   if (type === 'les') {
     const les = LESSEN.find(l => l.id === id);
     const w = S.werk.lessen[id];
-    ed.value = w && w.code != null ? w.code : les.start;
+    const onaangeroerd = w && !w.klaar && (OUDE_STARTS[id] || []).includes(w.code);
+    ed.value = w && w.code != null && !onaangeroerd ? w.code : les.start;
     const nr = LESSEN.indexOf(les) + 1;
     $('lesVak').innerHTML = `<h2>Les ${nr}: ${esc(les.titel)} ${les.ster ? '⭐' : ''}</h2>${les.uitleg}`
       + (les.voorbeeld ? `<pre>${esc(les.voorbeeld)}</pre>` : '')
