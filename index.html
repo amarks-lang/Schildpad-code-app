@@ -422,12 +422,16 @@ $('btnNieuweTekening').onclick = async () => {
   if (!naam) return;
   const id = nieuwId('v');
   S.werk.vrij[id] = { naam, code: VRIJ_START, t: Date.now() };
-  await dbSet(`${werkPad()}/vrij/${id}`, S.werk.vrij[id]);
+  try { await dbSet(`${werkPad()}/vrij/${id}`, S.werk.vrij[id]); }
+  catch(e){ console.error(e); zetStatus('⚠ Niet online opgeslagen — lokaal bewaard'); }
   open('vrij', id);
 };
 
 /* ============================ OPENEN ============================ */
 async function open(type, id){
+  // tekening bestaat niet (meer)? Dan terug naar de eerste les.
+  if (type === 'vrij' && !S.werk.vrij[id]) { type = 'les'; id = LESSEN[0].id; }
+  if (type === 'les' && !LESSEN.find(l => l.id === id)) id = LESSEN[0].id;
   await bewaarNu();
   S.type = type; S.itemId = id;
   const ed = $('editor');
@@ -453,8 +457,9 @@ async function open(type, id){
     };
     $('btnVerwijder').onclick = async () => {
       if (!confirm('Weet je zeker dat je "' + v.naam + '" wilt weggooien?')) return;
-      delete S.werk.vrij[id]; await dbSet(`${werkPad()}/vrij/${id}`, null);
-      S.itemId = null; open('les', LESSEN[0].id);
+      delete S.werk.vrij[id]; S.itemId = null; tekenZijbalk();
+      try { await dbSet(`${werkPad()}/vrij/${id}`, null); } catch(e){ console.error(e); }
+      open('les', LESSEN[0].id);
     };
     $('btnKlaar').hidden = true; $('btnReset').hidden = true;
   }
