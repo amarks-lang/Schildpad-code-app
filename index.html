@@ -595,24 +595,42 @@ function naarLeraarScherm(){
   toon('scrLeraar');
   if ($('lKlas').value) $('btnLKlasLaden').click();
 }
+let bezigMetInloggen = false;
+function wachtOpAuth(){
+  return new Promise(r => { const stop = firebase.auth().onAuthStateChanged(u => { stop(); r(u); }); });
+}
+async function controleerLeraar(u){
+  if ((u.email || '').toLowerCase() !== LERAAR_EMAIL.toLowerCase()) {
+    await firebase.auth().signOut();
+    alert('Dit account (' + u.email + ') heeft geen toegang tot het leraarsscherm.');
+    return;
+  }
+  naarLeraarScherm();
+}
 $('btnNaarLeraar').onclick = async () => {
   if (DEMO) { naarLeraarScherm(); return; }
+  if (bezigMetInloggen) return;          // dubbelklik = tweede popup = fout
+  bezigMetInloggen = true; $('btnNaarLeraar').disabled = true;
   try {
     const auth = firebase.auth();
-    let u = auth.currentUser;
+    let u = auth.currentUser || await wachtOpAuth();
     if (!u) {
       const prov = new firebase.auth.GoogleAuthProvider();
       prov.setCustomParameters({ prompt: 'select_account', login_hint: LERAAR_EMAIL });
-      u = (await auth.signInWithPopup(prov)).user;
+      try {
+        u = (await auth.signInWithPopup(prov)).user;
+      } catch(e) {
+        if (e.code === 'auth/popup-blocked') { await auth.signInWithRedirect(prov); return; }
+        if (e.code === 'auth/cancelled-popup-request' || e.code === 'auth/popup-closed-by-user') return;
+        throw e;
+      }
     }
-    if ((u.email || '').toLowerCase() !== LERAAR_EMAIL.toLowerCase()) {
-      await auth.signOut();
-      alert('Dit account heeft geen toegang tot het leraarsscherm.');
-      return;
-    }
-    naarLeraarScherm();
+    await controleerLeraar(u);
   } catch(e) { console.error(e); alert('Inloggen lukte niet: ' + (e.message || e)); }
+  finally { bezigMetInloggen = false; $('btnNaarLeraar').disabled = false; }
 };
+// terugkomen na een redirect-login
+if (!DEMO) firebase.auth().getRedirectResult().then(r => { if (r && r.user) controleerLeraar(r.user); }).catch(e => console.error(e));
 $('btnLeraarUit').onclick = async () => { if (!DEMO) await firebase.auth().signOut(); toon('scrLogin'); };
 $('btnLCodeMaak').onclick = () => {
   const w = ['kraai','vos','uil','das','egel','haas','reiger','otter','mol','specht','lynx','bever'];
