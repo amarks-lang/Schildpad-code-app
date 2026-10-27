@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schildpadcode</title>
+<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-database-compat.js"></script>
+<style>
+:root{
+  --bg:#eef5ee; --paneel:#ffffff; --tekst:#1f2d24; --zacht:#5d6f63; --lijn:#d3e2d6;
+  --groen:#2f8f4e; --groen-d:#226b3a; --groen-l:#dff1e4; --geel:#fff6d6; --geel-r:#e8c95a;
+  --rood:#c0392b; --rood-l:#fdecea; --blauw:#2d6cdf; --blauw-l:#e8f0fd;
+  --code-bg:#1e2430; --code-tekst:#e8edf5; --gutter:#7a8499;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--tekst);font-family:"Segoe UI",Roboto,Arial,sans-serif}
+button{font:inherit;cursor:pointer;border:0;border-radius:10px;padding:9px 14px;font-weight:600}
+.knop{background:var(--groen);color:#fff}.knop:hover{background:var(--groen-d)}
+.knop2{background:var(--paneel);color:var(--tekst);border:2px solid var(--lijn)}.knop2:hover{border-color:var(--groen)}
+.knop-rood{background:var(--rood);color:#fff}
+input,textarea{font:inherit}
+.scherm{display:none;height:100%}.scherm.actief{display:flex}
+/* login */
+.midden{margin:auto;background:var(--paneel);padding:32px;border-radius:18px;box-shadow:0 6px 24px #0001;width:min(560px,94vw);text-align:center}
+.midden h1{margin:0 0 6px;font-size:2rem}.midden p{color:var(--zacht)}
+.logo{font-size:3.2rem}
+.invoer{width:100%;padding:12px;font-size:1.3rem;border:2px solid var(--lijn);border-radius:10px;text-align:center;text-transform:lowercase;margin:10px 0}
+.namen{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin:16px 0;max-height:55vh;overflow:auto}
+.namen button{background:var(--groen-l);color:var(--tekst);padding:14px 8px;font-size:1.05rem}
+.namen button:hover{background:var(--groen);color:#fff}
+.link{background:none;color:var(--zacht);text-decoration:underline;font-weight:400;padding:4px}
+.melding{color:var(--rood);min-height:1.4em}
+/* app */
+#scrApp{flex-direction:column}
+.balk{display:flex;align-items:center;gap:12px;padding:8px 14px;background:var(--groen);color:#fff}
+.balk .titel{font-weight:700;font-size:1.15rem}
+.balk .ruimte{flex:1}
+.balk .status{font-size:.9rem;opacity:.9}
+.balk button{background:#ffffff26;color:#fff;padding:6px 12px}
+.werk{flex:1;display:grid;grid-template-columns:230px 1fr 488px;gap:12px;padding:12px;min-height:0}
+.zij{background:var(--paneel);border-radius:14px;overflow:auto;padding:10px}
+.zij h3{margin:8px 6px;font-size:.85rem;text-transform:uppercase;letter-spacing:.05em;color:var(--zacht)}
+.item{display:flex;align-items:center;gap:8px;width:100%;text-align:left;background:none;font-weight:500;padding:8px;border-radius:8px;color:var(--tekst)}
+.item:hover{background:var(--groen-l)}.item.actief{background:var(--groen);color:#fff}
+.item .nr{min-width:24px;height:24px;border-radius:50%;background:var(--lijn);display:grid;place-items:center;font-size:.8rem;flex:none}
+.item.klaar .nr{background:var(--groen);color:#fff}
+.item.actief .nr{background:#fff;color:var(--groen)}
+.item .ster{margin-left:auto}
+.middenkolom{display:flex;flex-direction:column;gap:10px;min-height:0}
+.les{background:var(--paneel);border-radius:14px;padding:14px 18px;overflow:auto;max-height:44%;flex:none}
+.les h2{margin:0 0 6px}
+.les p{margin:6px 0;line-height:1.45}
+.les code{background:var(--blauw-l);padding:1px 5px;border-radius:5px;font-family:Consolas,monospace}
+.les pre{background:var(--code-bg);color:var(--code-tekst);padding:10px;border-radius:8px;overflow:auto;font-size:.92rem}
+.opdracht{background:var(--groen-l);border-left:5px solid var(--groen);padding:8px 12px;border-radius:8px;margin:8px 0}
+.uitdaging{background:var(--geel);border-left:5px solid var(--geel-r);padding:8px 12px;border-radius:8px;margin:8px 0}
+.editorvak{flex:1;display:flex;background:var(--code-bg);border-radius:14px;overflow:hidden;min-height:180px}
+.gutter{padding:12px 6px 12px 10px;color:var(--gutter);text-align:right;font-family:Consolas,monospace;font-size:16px;line-height:1.5;user-select:none;overflow:hidden;white-space:pre}
+.gutter .fout{color:#fff;background:var(--rood);border-radius:4px;padding:0 3px}
+#editor{flex:1;background:transparent;color:var(--code-tekst);border:0;resize:none;outline:none;padding:12px;font-family:Consolas,monospace;font-size:16px;line-height:1.5;white-space:pre;overflow:auto;tab-size:4;caret-color:#7CFC9A}
+.rechts{display:flex;flex-direction:column;gap:10px;min-height:0;overflow:auto}
+.knoppen{display:flex;gap:8px;flex-wrap:wrap}
+.tekenvak{background:#fff;border-radius:14px;padding:4px;border:3px solid var(--lijn)}
+#turtleCanvas{width:460px;height:460px;position:relative;margin:auto}
+.foutvak{background:var(--rood-l);border:2px solid var(--rood);border-radius:10px;padding:10px 12px;line-height:1.4}
+.foutvak b{color:var(--rood)}
+.uitvoer{background:var(--paneel);border-radius:10px;padding:8px 12px;font-family:Consolas,monospace;white-space:pre-wrap;max-height:120px;overflow:auto}
+.klaarknop.klaar{background:var(--geel-r);color:var(--tekst)}
+/* leraar */
+#scrLeraar{flex-direction:column}
+.lerarinhoud{padding:16px;overflow:auto;display:grid;grid-template-columns:340px 1fr;gap:16px;flex:1;min-height:0}
+.kaart{background:var(--paneel);border-radius:14px;padding:16px}
+.kaart h3{margin-top:0}
+.kaart textarea{width:100%;min-height:260px;border:2px solid var(--lijn);border-radius:10px;padding:8px}
+.kaart input{width:100%;padding:9px;border:2px solid var(--lijn);border-radius:10px;margin-bottom:8px}
+table{border-collapse:collapse;font-size:.9rem}
+th,td{border:1px solid var(--lijn);padding:4px 6px;text-align:center}
+th{background:var(--groen-l)}
+td.naam{text-align:left;font-weight:600;white-space:nowrap;cursor:pointer}
+td.cel{cursor:pointer;min-width:28px}
+td.k{background:var(--groen);color:#fff}td.b{background:var(--geel)}
+.overzicht{overflow:auto}
+/* modal */
+.modal{position:fixed;inset:0;background:#0006;display:none;align-items:center;justify-content:center;z-index:9}
+.modal.open{display:flex}
+.modalkaart{background:var(--paneel);border-radius:16px;padding:18px;width:min(1000px,96vw);max-height:94vh;overflow:auto}
+.modalgrid{display:grid;grid-template-columns:1fr 470px;gap:14px}
+.modalkaart pre{background:var(--code-bg);color:var(--code-tekst);padding:10px;border-radius:8px;max-height:60vh;overflow:auto}
+.demo{background:var(--geel);color:var(--tekst);padding:4px 10px;border-radius:8px;font-size:.85rem}
+@media (max-width:1100px){
+  .werk{grid-template-columns:200px 1fr;}
+  .rechts{grid-column:1/-1}
+  .lerarinhoud,.modalgrid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ INLOGGEN: KLASCODE ============ -->
+<section class="scherm actief" id="scrLogin">
+  <div class="midden">
+    <div class="logo">🐢</div>
+    <h1>Schildpadcode</h1>
+    <p>Leer programmeren in Python met een tekenende schildpad.</p>
+    <input class="invoer" id="inKlas" placeholder="klascode" autocomplete="off">
+    <div class="melding" id="loginMelding"></div>
+    <button class="knop" id="btnKlas" style="width:100%;font-size:1.1rem">Verder ➜</button>
+    <p><button class="link" id="btnNaarLeraar">Ik ben de leraar</button></p>
+    <div id="demoMelding"></div>
+  </div>
+</section>
+
+<!-- ============ INLOGGEN: NAAM ============ -->
+<section class="scherm" id="scrNamen">
+  <div class="midden">
+    <h1>Wie ben jij?</h1>
+    <p id="klasNaamTekst"></p>
+    <div class="namen" id="namenLijst"></div>
+    <button class="link" id="btnTerugKlas">← andere klascode</button>
+  </div>
+</section>
+
+<!-- ============ APP ============ -->
+<section class="scherm" id="scrApp">
+  <div class="balk">
+    <span class="titel">🐢 Schildpadcode</span>
+    <span id="wieTekst"></span>
+    <span class="ruimte"></span>
+    <span class="status" id="opslagStatus"></span>
+    <button id="btnUitloggen">Wissel leerling</button>
+  </div>
+  <div class="werk">
+    <nav class="zij">
+      <h3>Lessen</h3>
+      <div id="lessenLijst"></div>
+      <h3>Mijn tekeningen</h3>
+      <div id="vrijLijst"></div>
+      <button class="item" id="btnNieuweTekening"><span class="nr">+</span>Nieuwe tekening</button>
+    </nav>
+    <div class="middenkolom">
+      <div class="les" id="lesVak"></div>
+      <div class="editorvak">
+        <div class="gutter" id="gutter">1</div>
+        <textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+      </div>
+    </div>
+    <div class="rechts">
+      <div class="knoppen">
+        <button class="knop" id="btnRun">▶ Uitvoeren</button>
+        <button class="knop2" id="btnStop">■ Stop</button>
+        <button class="knop2" id="btnReset">↺ Opnieuw beginnen</button>
+        <button class="knop2 klaarknop" id="btnKlaar">✓ Klaar!</button>
+      </div>
+      <div class="tekenvak" id="tekenSlot"><div id="turtleCanvas"></div></div>
+      <div class="foutvak" id="foutVak" hidden></div>
+      <div class="uitvoer" id="uitvoer" hidden></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LERAAR ============ -->
+<section class="scherm" id="scrLeraar">
+  <div class="balk">
+    <span class="titel">🐢 Schildpadcode — leraar</span>
+    <span class="ruimte"></span>
+    <button id="btnLeraarUit">Uitloggen</button>
+  </div>
+  <div class="lerarinhoud">
+    <div class="kaart">
+      <h3>Klas</h3>
+      <input id="lKlas" placeholder="klascode, bijv. groep56linde">
+      <button class="knop" id="btnLKlasLaden">Klas laden / aanmaken</button>
+      <h3 style="margin-top:18px">Klassenlijst</h3>
+      <p style="color:var(--zacht);margin-top:0">Eén voornaam per regel. Bestaand werk blijft bewaard zolang de naam hetzelfde blijft.</p>
+      <textarea id="lNamen"></textarea>
+      <button class="knop" id="btnLNamenOpslaan" style="margin-top:8px">Klassenlijst opslaan</button>
+      <div class="melding" id="lMelding" style="color:var(--groen)"></div>
+    </div>
+    <div class="kaart overzicht">
+      <h3>Voortgang <button class="knop2" id="btnLVernieuw" style="padding:4px 10px;margin-left:8px">↻</button></h3>
+      <p style="color:var(--zacht);margin-top:0">Groen = klaar, geel = begonnen. Klik op een vakje om de code te bekijken en uit te voeren, klik op een naam voor de eigen tekeningen.</p>
+      <div id="lOverzicht"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ MODAL ============ -->
+<div class="modal" id="modal">
+  <div class="modalkaart">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <h3 id="modalTitel" style="margin:0;flex:1"></h3>
+      <button class="knop" id="btnModalRun">▶ Uitvoeren</button>
+      <button class="knop2" id="btnModalSluit">Sluiten</button>
+    </div>
+    <div class="modalgrid">
+      <div id="modalInhoud"></div>
+      <div class="tekenvak" id="modalTekenSlot"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   INSTELLINGEN — vul hier je Firebase-config in (Realtime Database).
+   Zolang apiKey "VUL_IN" is, draait de app in demomodus (alleen lokaal).
+   ===================================================================== */
+const FIREBASE_CONFIG = {
+  apiKey: "VUL_IN",
+  authDomain: "",
+  databaseURL: "",   // bijv. https://schildpadcode-default-rtdb.europe-west1.firebasedatabase.app
+  projectId: "",
+  appId: ""
+};
+const LERAAR_PIN = "1234";   // pincode voor het leraarsscherm
+const CANVAS = 460;
+
+/* =====================================================================
+   LESSEN — voeg gerust lessen toe of pas ze aan.
+   ster:true = extra uitdaging (bonusles)
+   ===================================================================== */
+const KOP = 'import turtle\nt = turtle.Turtle()\nt.shape("turtle")\n\n';
+const LESSEN = [
+{ id:'l01', titel:'Hallo schildpad',
+  uitleg:'<p>De schildpad is een pen. Met <code>t.forward(100)</code> loopt hij 100 stapjes vooruit en trekt hij een lijn. Met <code>t.backward(50)</code> loopt hij achteruit.</p><p>De eerste twee regels moeten altijd bovenaan staan: ze maken de schildpad <code>t</code>.</p>',
+  opdracht:'Druk op ▶ Uitvoeren. Maak de lijn daarna 200 stapjes lang. Laat hem dan 50 stapjes achteruit lopen.',
+  uitdaging:'Hoe ver kan de schildpad lopen voordat hij uit beeld verdwijnt?',
+  start: KOP + 't.forward(100)\n' },
+{ id:'l02', titel:'Draaien',
+  uitleg:'<p><code>t.left(90)</code> draait de schildpad een kwartslag naar links. <code>t.right(90)</code> een kwartslag naar rechts. Het getal is het aantal <b>graden</b>: een hele rondje is 360.</p>',
+  voorbeeld:'t.forward(100)\nt.left(90)\nt.forward(50)',
+  opdracht:'Teken de letter <b>L</b>: eerst een lijn omhoog-naar-beneden, dan een korte lijn opzij.',
+  uitdaging:'Teken een trap met 4 treden.',
+  start: KOP + 't.forward(100)\nt.left(90)\nt.forward(50)\n' },
+{ id:'l03', titel:'Het vierkant',
+  uitleg:'<p>Een vierkant heeft 4 even lange kanten en 4 hoeken van 90 graden. Dus: vooruit, draai, vooruit, draai…</p>',
+  opdracht:'Maak een vierkant met kanten van 100.',
+  uitdaging:'Maak een rechthoek van 150 breed en 60 hoog.',
+  start: KOP + 't.forward(100)\nt.left(90)\n' },
+{ id:'l04', titel:'Herhalen met for',
+  uitleg:'<p>Bij het vierkant typte je 4 keer hetzelfde. Dat kan slimmer! Met <code>for</code> herhaal je regels.</p><p>Let op de <b>dubbele punt</b> <code>:</code> en dat de regels eronder <b>4 spaties</b> inspringen. Alles wat inspringt, wordt herhaald.</p>',
+  voorbeeld:'for i in range(4):\n    t.forward(100)\n    t.left(90)',
+  opdracht:'Maak het vierkant nu met een <code>for</code>-lus. Hoeveel regels heb je nu nodig?',
+  uitdaging:'Zet een tweede lus om je vierkant heen: teken 36 vierkanten en draai na elk vierkant <code>t.left(10)</code>. Tip: <code>t.speed(0)</code> maakt de schildpad supersnel.',
+  start: KOP + 'for i in range(4):\n    t.forward(100)\n' },
+{ id:'l05', titel:'Driehoek, zeshoek…',
+  uitleg:'<p>De schildpad draait in totaal altijd één heel rondje: <b>360 graden</b>. Bij een vorm met 3 hoeken draait hij dus 3 keer 360 ÷ 3 = 120 graden.</p>',
+  voorbeeld:'for i in range(3):\n    t.forward(100)\n    t.left(120)',
+  opdracht:'Maak een driehoek. Maak daarna een zeshoek (6 hoeken). Hoeveel graden moet hij dan draaien?',
+  uitdaging:'Maak een 36-hoek met kleine stapjes. Op welke vorm lijkt dat?',
+  start: KOP + 'for i in range(3):\n    t.forward(100)\n    t.left(120)\n' },
+{ id:'l06', titel:'Kleur en dikte',
+  uitleg:'<p>Met <code>t.color("red")</code> kies je een kleur, met <code>t.pensize(5)</code> een dikkere pen. Engelse kleurnamen: red, blue, green, yellow, orange, purple, black, brown, pink, gray.</p>',
+  voorbeeld:'t.color("blue")\nt.pensize(6)\nt.forward(100)',
+  opdracht:'Teken een vierkant waarbij elke kant een andere kleur heeft.',
+  uitdaging:'Maak een regenboog-zeshoek met 6 kleuren en een dikke pen.',
+  start: KOP + 't.color("blue")\nt.pensize(6)\nt.forward(100)\n' },
+{ id:'l07', titel:'Pen op, pen neer',
+  uitleg:'<p><code>t.penup()</code> tilt de pen op: de schildpad loopt zonder te tekenen. <code>t.pendown()</code> zet hem weer neer.</p><p>Met <code>t.goto(x, y)</code> spring je naar een plek. Het midden is <code>(0, 0)</code>. Rechts is x positief, omhoog is y positief.</p>',
+  voorbeeld:'t.penup()\nt.goto(-150, 100)\nt.pendown()\nt.forward(50)',
+  opdracht:'Teken drie vierkanten naast elkaar, zonder lijnen ertussen.',
+  uitdaging:'Teken een smiley: twee ogen en een mond op de goede plek.',
+  start: KOP + 't.penup()\nt.goto(-150, 100)\nt.pendown()\n' },
+{ id:'l08', titel:'Inkleuren',
+  uitleg:'<p>Wil je een vorm vol kleuren? Zet <code>t.begin_fill()</code> vóór de vorm en <code>t.end_fill()</code> erachter. Met <code>t.fillcolor("yellow")</code> kies je de vulkleur.</p>',
+  voorbeeld:'t.fillcolor("yellow")\nt.begin_fill()\nfor i in range(4):\n    t.forward(100)\n    t.left(90)\nt.end_fill()',
+  opdracht:'Maak een gevuld geel vierkant.',
+  uitdaging:'Teken een huis: een gevuld vierkant met een rood dak (driehoek) erop.',
+  start: KOP + 't.fillcolor("yellow")\nt.begin_fill()\n\nt.end_fill()\n' },
+{ id:'l09', titel:'Variabelen',
+  uitleg:'<p>Een <b>variabele</b> is een doosje met een naam waar je iets in bewaart. <code>zijde = 80</code> stopt het getal 80 in het doosje <code>zijde</code>. Daarna kun je overal <code>zijde</code> gebruiken.</p>',
+  voorbeeld:'zijde = 80\nfor i in range(4):\n    t.forward(zijde)\n    t.left(90)',
+  opdracht:'Verander alleen het getal bij <code>zijde</code> en voer opnieuw uit. Wat gebeurt er?',
+  uitdaging:'Maak ook een variabele <code>hoeken = 5</code> en laat de draaihoek uitrekenen met <code>360 / hoeken</code>.',
+  start: KOP + 'zijde = 80\nfor i in range(4):\n    t.forward(zijde)\n    t.left(90)\n' },
+{ id:'l10', titel:'Je eigen commando',
+  uitleg:'<p>Met <code>def</code> maak je een eigen commando (een <b>functie</b>). Daarna hoef je alleen nog de naam te typen.</p><p>Weer: dubbele punt en inspringen!</p>',
+  voorbeeld:'def vierkant():\n    for i in range(4):\n        t.forward(50)\n        t.left(90)\n\nvierkant()',
+  opdracht:'Maak het commando <code>vierkant()</code> en teken er drie, met <code>t.penup()</code> en <code>t.forward()</code> ertussen.',
+  uitdaging:'Maak ook een commando <code>driehoek()</code> en gebruik ze samen voor een huisje.',
+  start: KOP + 'def vierkant():\n    for i in range(4):\n        t.forward(50)\n        t.left(90)\n\nvierkant()\n' },
+{ id:'l11', titel:'Commando met een getal',
+  uitleg:'<p>Je kunt je commando een getal meegeven. Bij <code>def vierkant(zijde):</code> komt het getal tussen de haakjes in het doosje <code>zijde</code>.</p>',
+  voorbeeld:'def vierkant(zijde):\n    for i in range(4):\n        t.forward(zijde)\n        t.left(90)\n\nvierkant(30)\nvierkant(60)\nvierkant(90)',
+  opdracht:'Teken 5 vierkanten die steeds groter worden.',
+  uitdaging:'Gebruik een <code>for</code>-lus: <code>for i in range(10): vierkant(i * 15)</code>',
+  start: KOP + 'def vierkant(zijde):\n    for i in range(4):\n        t.forward(zijde)\n        t.left(90)\n\nvierkant(30)\n' },
+{ id:'l12', titel:'De kanteel',
+  uitleg:'<p>Bovenop een kasteelmuur zitten <b>kantelen</b>: steeds een blokje omhoog en weer omlaag. Wie dat met de hand typt, heeft heel veel regels nodig!</p><p>Slim trucje: <code>t.left(270)</code> is precies hetzelfde als <code>t.right(90)</code>. Korter én duidelijker.</p>',
+  voorbeeld:'def kanteel():\n    t.left(90)\n    t.forward(30)\n    t.right(90)\n    t.forward(30)\n    t.right(90)\n    t.forward(30)\n    t.left(90)\n    t.forward(30)\n\nfor i in range(5):\n    kanteel()',
+  opdracht:'Maak een rij van 5 kantelen met je eigen commando <code>kanteel()</code>.',
+  uitdaging:'Geef <code>kanteel(maat)</code> een getal mee, zodat je grote en kleine kantelen kunt maken.',
+  start: KOP + 't.penup()\nt.goto(-150, 0)\nt.pendown()\n\ndef kanteel():\n    t.left(90)\n    t.forward(30)\n    t.right(90)\n    t.forward(30)\n    t.right(90)\n    t.forward(30)\n    t.left(90)\n    t.forward(30)\n\nkanteel()\n' },
+{ id:'l13', titel:'Bouw je kasteel',
+  uitleg:'<p>Eindproject! Gebruik alles wat je kunt: functies, lussen, <code>goto</code>, kleuren en inkleuren.</p><p>Maak bijvoorbeeld de commando’s <code>muur()</code>, <code>toren()</code>, <code>poort()</code> en <code>vlag()</code>.</p>',
+  opdracht:'Bouw een kasteel met een muur met kantelen, minstens twee torens en een gevulde poort.',
+  uitdaging:'Voeg een vlag, ramen, een slotgracht (blauw) of de lucht met een zon toe.',
+  start: KOP + 't.speed(0)\n\ndef kanteel():\n    t.left(90)\n    t.forward(20)\n    t.right(90)\n    t.forward(20)\n    t.right(90)\n    t.forward(20)\n    t.left(90)\n    t.forward(20)\n\ndef naar(x, y):\n    t.penup()\n    t.goto(x, y)\n    t.pendown()\n\n# Muur\nnaar(-150, -150)\n\n# Torens\n\n# Poort\n\n' },
+{ id:'l14', titel:'Spiralen', ster:true,
+  uitleg:'<p>Als de schildpad bij elke stap een beetje verder loopt, krijg je een spiraal. <code>i</code> telt mee in de lus: 0, 1, 2, 3…</p><p>Met een <b>lijst</b> kleuren en <code>i % 4</code> wissel je steeds van kleur.</p>',
+  voorbeeld:'t.speed(0)\nkleuren = ["red", "orange", "green", "blue"]\nfor i in range(120):\n    t.color(kleuren[i % 4])\n    t.forward(i * 2)\n    t.left(91)',
+  opdracht:'Voer het voorbeeld uit. Verander 91 in 89, 120 of 144. Wat zie je?',
+  uitdaging:'Maak een spiraal met 6 kleuren en draai 59 graden.',
+  start: KOP + 't.speed(0)\nkleuren = ["red", "orange", "green", "blue"]\nfor i in range(120):\n    t.color(kleuren[i % 4])\n    t.forward(i * 2)\n    t.left(91)\n' },
+{ id:'l15', titel:'Cirkels en bloemen', ster:true,
+  uitleg:'<p><code>t.circle(50)</code> tekent een cirkel. Als je steeds een stukje draait en een nieuwe cirkel tekent, krijg je een bloem.</p>',
+  voorbeeld:'t.speed(0)\nfor i in range(12):\n    t.circle(60)\n    t.left(30)',
+  opdracht:'Maak een bloem van 12 cirkels. Hoeveel graden moet je draaien voor 18 cirkels?',
+  uitdaging:'Maak een bloemenveld: een functie <code>bloem(x, y, kleur)</code> en teken er 5 op verschillende plekken, met een steel.',
+  start: KOP + 't.speed(0)\nfor i in range(12):\n    t.circle(60)\n    t.left(30)\n' },
+];
+const VRIJ_START = KOP + '# Teken hier wat je maar wilt!\n';
+
+/* ============================ DATABASE ============================ */
+const DEMO = !FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey === 'VUL_IN';
+let fb = null;
+if (!DEMO) { firebase.initializeApp(FIREBASE_CONFIG); fb = firebase.database(); }
+const lokaal = {
+  laad(){ try { return JSON.parse(localStorage.getItem('schildpad_demo') || '{}'); } catch(e){ return {}; } },
+  bewaar(d){ try { localStorage.setItem('schildpad_demo', JSON.stringify(d)); } catch(e){} }
+};
+const delen = p => p.split('/').filter(Boolean);
+async function dbGet(p){
+  if (fb) { const s = await fb.ref(p).get(); return s.val(); }
+  let d = lokaal.laad();
+  for (const k of delen(p)) { if (d == null) return null; d = d[k]; }
+  return d ?? null;
+}
+async function dbSet(p, v){
+  if (fb) return fb.ref(p).set(v);
+  const root = lokaal.laad(); let d = root; const ks = delen(p);
+  ks.slice(0, -1).forEach(k => { if (typeof d[k] !== 'object' || d[k] === null) d[k] = {}; d = d[k]; });
+  if (v === null) delete d[ks[ks.length-1]]; else d[ks[ks.length-1]] = v;
+  lokaal.bewaar(root);
+}
+// noodkopie per leerling (handig als wifi even wegvalt)
+function backup(sleutel, waarde){ try { localStorage.setItem('sp_bk_' + sleutel, JSON.stringify(waarde)); } catch(e){} }
+function leesBackup(sleutel){ try { return JSON.parse(localStorage.getItem('sp_bk_' + sleutel)); } catch(e){ return null; } }
+
+/* ============================ HULP ============================ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const schoon = s => String(s || '').toLowerCase().trim().replace(/[^a-z0-9_-]/g, '');
+const nieuwId = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+function toon(id){ document.querySelectorAll('.scherm').forEach(s => s.classList.toggle('actief', s.id === id)); }
+
+const S = { klas:null, leerling:null, type:'les', itemId:null, werk:{lessen:{}, vrij:{}}, saveTimer:null };
+const pad = () => `turtle/klassen/${S.klas}`;
+const werkPad = () => `${pad()}/werk/${S.leerling.id}`;
+
+if (DEMO) $('demoMelding').innerHTML = '<p class="demo">Demomodus: werk wordt alleen in deze browser bewaard. Vul de Firebase-config in om online op te slaan.</p>';
+
+/* ============================ INLOGGEN ============================ */
+$('inKlas').value = localStorage.getItem('sp_klas') || '';
+$('inKlas').addEventListener('keydown', e => { if (e.key === 'Enter') $('btnKlas').click(); });
+$('btnKlas').onclick = async () => {
+  const code = schoon($('inKlas').value);
+  $('loginMelding').textContent = '';
+  if (!code) { $('loginMelding').textContent = 'Vul de klascode in.'; return; }
+  try {
+    const ll = await dbGet(`turtle/klassen/${code}/leerlingen`);
+    if (!ll) { $('loginMelding').textContent = 'Deze klascode ken ik niet. Vraag het aan je juf of meester.'; return; }
+    S.klas = code; localStorage.setItem('sp_klas', code);
+    $('klasNaamTekst').textContent = 'Klas: ' + code;
+    const lijst = Object.entries(ll).map(([id, v]) => ({ id, naam: v.naam })).sort((a, b) => a.naam.localeCompare(b.naam, 'nl'));
+    $('namenLijst').innerHTML = '';
+    lijst.forEach(l => {
+      const b = document.createElement('button'); b.textContent = l.naam;
+      b.onclick = () => startLeerling(l); $('namenLijst').appendChild(b);
+    });
+    toon('scrNamen');
+  } catch(e) { $('loginMelding').textContent = 'Kan geen verbinding maken met de database.'; console.error(e); }
+};
+$('btnTerugKlas').onclick = () => toon('scrLogin');
+$('btnUitloggen').onclick = async () => { await bewaarNu(); stopCode(); S.leerling = null; toon('scrNamen'); };
+
+async function startLeerling(l){
+  S.leerling = l;
+  $('wieTekst').textContent = '· ' + l.naam;
+  const w = await dbGet(werkPad()) || {};
+  S.werk = { lessen: w.lessen || {}, vrij: w.vrij || {} };
+  // backup terugzetten als die nieuwer is
+  for (const les of LESSEN) {
+    const bk = leesBackup(`${S.klas}/${l.id}/lessen/${les.id}`);
+    if (bk && (!S.werk.lessen[les.id] || (bk.t || 0) > (S.werk.lessen[les.id].t || 0))) S.werk.lessen[les.id] = bk;
+  }
+  toon('scrApp');
+  $('tekenSlot').appendChild($('turtleCanvas'));
+  const eerste = LESSEN.find(x => !(S.werk.lessen[x.id] || {}).klaar) || LESSEN[0];
+  open('les', eerste.id);
+}
+
+/* ============================ ZIJBALK ============================ */
+function tekenZijbalk(){
+  const ll = $('lessenLijst'); ll.innerHTML = '';
+  LESSEN.forEach((les, i) => {
+    const w = S.werk.lessen[les.id] || {};
+    const b = document.createElement('button');
+    b.className = 'item' + (w.klaar ? ' klaar' : '') + (S.type === 'les' && S.itemId === les.id ? ' actief' : '');
+    b.innerHTML = `<span class="nr">${w.klaar ? '✓' : i + 1}</span>${esc(les.titel)}${les.ster ? '<span class="ster">⭐</span>' : ''}`;
+    b.onclick = () => open('les', les.id);
+    ll.appendChild(b);
+  });
+  const vl = $('vrijLijst'); vl.innerHTML = '';
+  Object.entries(S.werk.vrij).sort((a, b) => (b[1].t || 0) - (a[1].t || 0)).forEach(([id, v]) => {
+    const b = document.createElement('button');
+    b.className = 'item' + (S.type === 'vrij' && S.itemId === id ? ' actief' : '');
+    b.innerHTML = `<span class="nr">🎨</span>${esc(v.naam)}`;
+    b.onclick = () => open('vrij', id);
+    vl.appendChild(b);
+  });
+}
+$('btnNieuweTekening').onclick = async () => {
+  const naam = (prompt('Hoe heet je tekening?', 'Mijn kasteel') || '').trim();
+  if (!naam) return;
+  const id = nieuwId('v');
+  S.werk.vrij[id] = { naam, code: VRIJ_START, t: Date.now() };
+  await dbSet(`${werkPad()}/vrij/${id}`, S.werk.vrij[id]);
+  open('vrij', id);
+};
+
+/* ============================ OPENEN ============================ */
+async function open(type, id){
+  await bewaarNu();
+  S.type = type; S.itemId = id;
+  const ed = $('editor');
+  if (type === 'les') {
+    const les = LESSEN.find(l => l.id === id);
+    const w = S.werk.lessen[id];
+    ed.value = w && w.code != null ? w.code : les.start;
+    const nr = LESSEN.indexOf(les) + 1;
+    $('lesVak').innerHTML = `<h2>Les ${nr}: ${esc(les.titel)} ${les.ster ? '⭐' : ''}</h2>${les.uitleg}`
+      + (les.voorbeeld ? `<pre>${esc(les.voorbeeld)}</pre>` : '')
+      + `<div class="opdracht"><b>Opdracht:</b> ${les.opdracht}</div>`
+      + (les.uitdaging ? `<div class="uitdaging"><b>⭐ Uitdaging:</b> ${les.uitdaging}</div>` : '');
+    $('btnKlaar').hidden = false; $('btnReset').hidden = false;
+    zetKlaarKnop(!!(w && w.klaar));
+  } else {
+    const v = S.werk.vrij[id];
+    ed.value = v.code;
+    $('lesVak').innerHTML = `<h2>🎨 ${esc(v.naam)}</h2><p>Hier mag je vrij tekenen. Alles wordt vanzelf bewaard.</p>
+      <p><button class="knop2" id="btnHernoem">Naam veranderen</button> <button class="knop2" id="btnVerwijder">Weggooien</button></p>`;
+    $('btnHernoem').onclick = async () => {
+      const n = (prompt('Nieuwe naam:', v.naam) || '').trim(); if (!n) return;
+      v.naam = n; await dbSet(`${werkPad()}/vrij/${id}/naam`, n); open('vrij', id);
+    };
+    $('btnVerwijder').onclick = async () => {
+      if (!confirm('Weet je zeker dat je "' + v.naam + '" wilt weggooien?')) return;
+      delete S.werk.vrij[id]; await dbSet(`${werkPad()}/vrij/${id}`, null);
+      S.itemId = null; open('les', LESSEN[0].id);
+    };
+    $('btnKlaar').hidden = true; $('btnReset').hidden = true;
+  }
+  ed.scrollTop = 0;
+  werkGutterBij(); toonFout(null); $('uitvoer').hidden = true;
+  tekenZijbalk();
+  runCode(ed.value);
+}
+function zetKlaarKnop(k){ const b = $('btnKlaar'); b.classList.toggle('klaar', k); b.textContent = k ? '★ Klaar!' : '✓ Klaar!'; }
+
+$('btnKlaar').onclick = async () => {
+  if (S.type !== 'les') return;
+  const w = S.werk.lessen[S.itemId] || { code: $('editor').value };
+  w.klaar = !w.klaar; w.code = $('editor').value; w.t = Date.now();
+  S.werk.lessen[S.itemId] = w;
+  zetKlaarKnop(w.klaar); tekenZijbalk();
+  await bewaarNu(true);
+};
+$('btnReset').onclick = () => {
+  if (S.type !== 'les') return;
+  if (!confirm('Wil je opnieuw beginnen? Je code van deze les wordt vervangen door de startcode.')) return;
+  $('editor').value = LESSEN.find(l => l.id === S.itemId).start;
+  werkGutterBij(); planOpslaan();
+};
+
+/* ============================ OPSLAAN ============================ */
+function zetStatus(t){ $('opslagStatus').textContent = t; }
+function planOpslaan(){
+  zetStatus('Opslaan…');
+  clearTimeout(S.saveTimer);
+  S.saveTimer = setTimeout(() => bewaarNu(true), 1500);
+}
+async function bewaarNu(forceer){
+  if (!S.leerling || !S.itemId) return;
+  if (!forceer && !S.saveTimer) return;
+  clearTimeout(S.saveTimer); S.saveTimer = null;
+  const code = $('editor').value, t = Date.now();
+  let p, obj;
+  if (S.type === 'les') {
+    obj = Object.assign({}, S.werk.lessen[S.itemId] || {}, { code, t });
+    obj.klaar = !!obj.klaar;
+    S.werk.lessen[S.itemId] = obj; p = `lessen/${S.itemId}`;
+  } else {
+    if (!S.werk.vrij[S.itemId]) return;
+    obj = Object.assign(S.werk.vrij[S.itemId], { code, t }); p = `vrij/${S.itemId}`;
+  }
+  backup(`${S.klas}/${S.leerling.id}/${p}`, obj);
+  try { await dbSet(`${werkPad()}/${p}`, obj); zetStatus(DEMO ? 'Bewaard (alleen deze browser)' : 'Opgeslagen ✓'); }
+  catch(e){ zetStatus('⚠ Niet online opgeslagen — lokaal bewaard'); console.error(e); }
+}
+window.addEventListener('beforeunload', () => { if (S.saveTimer) bewaarNu(true); });
+
+/* ============================ EDITOR ============================ */
+const ed = $('editor');
+function werkGutterBij(foutRegel){
+  const n = ed.value.split('\n').length;
+  let h = '';
+  for (let i = 1; i <= n; i++) h += (i === foutRegel ? `<span class="fout">${i}</span>` : i) + '\n';
+  $('gutter').innerHTML = h;
+  $('gutter').scrollTop = ed.scrollTop;
+}
+ed.addEventListener('scroll', () => { $('gutter').scrollTop = ed.scrollTop; });
+ed.addEventListener('input', () => { werkGutterBij(); planOpslaan(); });
+function voegIn(txt){ ed.setRangeText(txt, ed.selectionStart, ed.selectionEnd, 'end'); ed.dispatchEvent(new Event('input')); }
+ed.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); $('btnRun').click(); return; }
+  if (e.key === 'Tab') { e.preventDefault(); voegIn('    '); return; }
+  if (e.key === 'Enter') {
+    const voor = ed.value.slice(0, ed.selectionStart);
+    const regel = voor.split('\n').pop();
+    let ins = regel.match(/^ */)[0];
+    if (/:\s*$/.test(regel)) ins += '    ';
+    e.preventDefault(); voegIn('\n' + ins); return;
+  }
+  if (e.key === 'Backspace' && ed.selectionStart === ed.selectionEnd) {
+    const voor = ed.value.slice(0, ed.selectionStart);
+    const regel = voor.split('\n').pop();
+    if (regel.length >= 4 && /^ +$/.test(regel) && regel.length % 4 === 0) {
+      e.preventDefault();
+      ed.setRangeText('', ed.selectionStart - 4, ed.selectionStart, 'end');
+      ed.dispatchEvent(new Event('input'));
+    }
+  }
+});
+
+/* ============================ PYTHON (Skulpt) ============================ */
+let bezig = false, stopGevraagd = false;
+function leesBestand(x){
+  if (Sk.builtinFiles === undefined || Sk.builtinFiles.files[x] === undefined) throw "Bestand niet gevonden: '" + x + "'";
+  return Sk.builtinFiles.files[x];
+}
+async function runCode(code){
+  if (bezig) { stopCode(); await new Promise(r => setTimeout(r, 80)); }
+  $('uitvoer').textContent = ''; $('uitvoer').hidden = true; toonFout(null);
+  Sk.hardInterrupt = false; stopGevraagd = false;
+  Sk.configure({
+    output: t => { $('uitvoer').textContent += t; $('uitvoer').hidden = false; },
+    read: leesBestand, __future__: Sk.python3,
+    yieldLimit: 100, killableWhile: true, killableFor: true,
+    inputfun: p => window.prompt(p) || '', inputfunTakesPrompt: true
+  });
+  (Sk.TurtleGraphics || (Sk.TurtleGraphics = {})).target = 'turtleCanvas';
+  Sk.TurtleGraphics.width = CANVAS; Sk.TurtleGraphics.height = CANVAS;
+  if (Sk.TurtleGraphics.reset) Sk.TurtleGraphics.reset();
+  bezig = true; $('btnRun').textContent = '⏳ Bezig…';
+  try { await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody('<stdin>', false, code, true)); }
+  catch(e){ if (!stopGevraagd) toonFout(e); }
+  finally { bezig = false; $('btnRun').textContent = '▶ Uitvoeren'; }
+}
+function stopCode(){ if (bezig) { stopGevraagd = true; Sk.hardInterrupt = true; } }
+$('btnRun').onclick = () => { bewaarNu(true); runCode(ed.value); };
+$('btnStop').onclick = stopCode;
+
+const TIPS = {
+  NameError: 'Python kent dit woord niet. Kijk of je het goed gespeld hebt (hoofdletters tellen mee!) en of <code>t = turtle.Turtle()</code> bovenaan staat.',
+  AttributeError: 'De schildpad kent dit commando niet. Controleer de spelling: <code>forward</code>, <code>left</code>, <code>right</code>, <code>penup</code>…',
+  SyntaxError: 'Python snapt deze zin niet. Ben je een haakje <code>( )</code>, een dubbele punt <code>:</code> of een aanhalingsteken <code>"</code> vergeten?',
+  IndentationError: 'Het inspringen klopt niet. Regels onder een <code>for</code> of <code>def</code> moeten 4 spaties naar rechts, en alle regels in dat blok even ver.',
+  TypeError: 'Er klopt iets niet met wat tussen de haakjes staat. Moet daar een getal staan? Of ben je de haakjes <code>()</code> vergeten?',
+  ZeroDivisionError: 'Je deelt door 0. Dat kan niet!',
+  TurtleGraphicsError: 'De schildpad snapt deze opdracht niet. Is de kleurnaam goed gespeld (in het Engels)?'
+};
+function toonFout(e){
+  const v = $('foutVak');
+  if (!e) { v.hidden = true; werkGutterBij(); return; }
+  const naam = e.tp$name || (e.constructor && e.constructor.name) || 'Fout';
+  let regel = null;
+  if (e.traceback && e.traceback.length) regel = e.traceback[0].lineno;
+  const tip = TIPS[naam] || 'Kijk nog eens goed naar de regel die rood is.';
+  v.innerHTML = `<b>Oeps! ${regel ? 'Fout in regel ' + regel : 'Er ging iets mis'}</b><br>${tip}<br><small style="color:var(--zacht)">${esc(String(e))}</small>`;
+  v.hidden = false;
+  werkGutterBij(regel);
+}
+
+/* ============================ LERAAR ============================ */
+$('btnNaarLeraar').onclick = () => {
+  const p = prompt('Pincode leraar:');
+  if (p === null) return;
+  if (p !== LERAAR_PIN) { alert('Verkeerde pincode.'); return; }
+  $('lKlas').value = localStorage.getItem('sp_klas') || '';
+  toon('scrLeraar');
+  if ($('lKlas').value) $('btnLKlasLaden').click();
+};
+$('btnLeraarUit').onclick = () => toon('scrLogin');
+let L = { klas:null, leerlingen:{} };
+$('btnLKlasLaden').onclick = async () => {
+  const code = schoon($('lKlas').value);
+  if (!code) { alert('Vul een klascode in (letters en cijfers, geen spaties).'); return; }
+  $('lKlas').value = code; L.klas = code; localStorage.setItem('sp_klas', code);
+  L.leerlingen = await dbGet(`turtle/klassen/${code}/leerlingen`) || {};
+  $('lNamen').value = Object.values(L.leerlingen).map(x => x.naam).sort((a, b) => a.localeCompare(b, 'nl')).join('\n');
+  $('lMelding').textContent = Object.keys(L.leerlingen).length ? '' : 'Nieuwe klas — vul de namen in en sla op.';
+  laadOverzicht();
+};
+$('btnLNamenOpslaan').onclick = async () => {
+  if (!L.klas) { alert('Laad eerst een klas.'); return; }
+  const namen = [...new Set($('lNamen').value.split('\n').map(s => s.trim()).filter(Boolean))];
+  const opNaam = {}; Object.entries(L.leerlingen).forEach(([id, v]) => opNaam[v.naam] = id);
+  const nieuw = {};
+  namen.forEach(n => { nieuw[opNaam[n] || nieuwId('l')] = { naam: n }; });
+  await dbSet(`turtle/klassen/${L.klas}/leerlingen`, nieuw);
+  L.leerlingen = nieuw;
+  $('lMelding').textContent = `Opgeslagen: ${namen.length} leerlingen. Klascode: ${L.klas}`;
+  laadOverzicht();
+};
+$('btnLVernieuw').onclick = () => laadOverzicht();
+let L_werk = {};
+async function laadOverzicht(){
+  if (!L.klas) return;
+  L_werk = await dbGet(`turtle/klassen/${L.klas}/werk`) || {};
+  const rijen = Object.entries(L.leerlingen).sort((a, b) => a[1].naam.localeCompare(b[1].naam, 'nl'));
+  if (!rijen.length) { $('lOverzicht').innerHTML = '<p>Nog geen leerlingen.</p>'; return; }
+  let h = '<table><tr><th>Naam</th>' + LESSEN.map((l, i) => `<th title="${esc(l.titel)}">${i + 1}${l.ster ? '⭐' : ''}</th>`).join('') + '<th>🎨</th></tr>';
+  rijen.forEach(([id, v]) => {
+    const w = L_werk[id] || {}, ls = w.lessen || {};
+    h += `<tr><td class="naam" data-lid="${id}">${esc(v.naam)}</td>`;
+    LESSEN.forEach(l => {
+      const x = ls[l.id];
+      const k = x ? (x.klaar ? 'k' : 'b') : '';
+      h += `<td class="cel ${k}" data-lid="${id}" data-les="${l.id}">${x ? (x.klaar ? '✓' : '•') : ''}</td>`;
+    });
+    h += `<td>${Object.keys(w.vrij || {}).length || ''}</td></tr>`;
+  });
+  $('lOverzicht').innerHTML = h + '</table>';
+  $('lOverzicht').querySelectorAll('td.cel').forEach(td => td.onclick = () => {
+    const x = ((L_werk[td.dataset.lid] || {}).lessen || {})[td.dataset.les];
+    if (!x) return;
+    const les = LESSEN.find(l => l.id === td.dataset.les);
+    openModal(`${L.leerlingen[td.dataset.lid].naam} — Les ${LESSEN.indexOf(les) + 1}: ${les.titel}`, x.code);
+  });
+  $('lOverzicht').querySelectorAll('td.naam').forEach(td => td.onclick = () => {
+    const vrij = (L_werk[td.dataset.lid] || {}).vrij || {};
+    const naam = L.leerlingen[td.dataset.lid].naam;
+    const items = Object.values(vrij);
+    if (!items.length) { alert(naam + ' heeft nog geen eigen tekeningen.'); return; }
+    openModal(naam + ' — eigen tekeningen', null, items);
+  });
+}
+let modalCode = '';
+function openModal(titel, code, lijst){
+  $('modalTitel').textContent = titel;
+  const inh = $('modalInhoud');
+  if (lijst) {
+    inh.innerHTML = lijst.map((v, i) => `<p><button class="knop2" data-i="${i}">🎨 ${esc(v.naam)}</button></p>`).join('') + '<pre id="modalPre"></pre>';
+    inh.querySelectorAll('button').forEach(b => b.onclick = () => { modalCode = lijst[b.dataset.i].code; $('modalPre').textContent = modalCode; runCode(modalCode); });
+    modalCode = lijst[0].code; inh.querySelector('#modalPre').textContent = modalCode;
+  } else {
+    modalCode = code; inh.innerHTML = `<pre>${esc(code)}</pre>`;
+  }
+  $('modalTekenSlot').appendChild($('turtleCanvas'));
+  $('modal').classList.add('open');
+  runCode(modalCode);
+}
+$('btnModalRun').onclick = () => runCode(modalCode);
+$('btnModalSluit').onclick = () => { stopCode(); $('modal').classList.remove('open'); $('tekenSlot').appendChild($('turtleCanvas')); };
+</script>
+</body>
+</html>

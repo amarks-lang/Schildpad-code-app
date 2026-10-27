@@ -1,0 +1,8 @@
+{
+  "rules": {
+    "turtle": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}
