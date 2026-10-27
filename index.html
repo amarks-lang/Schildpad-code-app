@@ -110,6 +110,7 @@ td.k{background:var(--groen);color:#fff}td.b{background:var(--geel)}
     <div class="melding" id="loginMelding"></div>
     <button class="knop" id="btnKlas" style="width:100%;font-size:1.1rem">Verder ➜</button>
     <p><button class="link" id="btnNaarLeraar">Ik ben de leraar</button></p>
+    <p id="leraarStatus" style="color:var(--zacht);min-height:1.2em;margin:0"></p>
     <div id="demoMelding"></div>
   </div>
 </section>
@@ -622,16 +623,19 @@ $('btnNaarLeraar').onclick = async () => {
     if (!u) {
       const prov = new firebase.auth.GoogleAuthProvider();
       prov.setCustomParameters({ prompt: 'select_account', login_hint: LERAAR_EMAIL });
+      $('leraarStatus').textContent = 'Er is een Google-inlogvenster geopend. Zie je het niet? Kijk achter dit venster.';
       try {
         u = (await auth.signInWithPopup(prov)).user;
       } catch(e) {
         if (e.code === 'auth/popup-blocked') { await auth.signInWithRedirect(prov); return; }
-        if (e.code === 'auth/cancelled-popup-request' || e.code === 'auth/popup-closed-by-user') return;
+        if (e.code === 'auth/cancelled-popup-request') return;
+        if (e.code === 'auth/popup-closed-by-user') { $('leraarStatus').textContent = 'Inlogvenster gesloten. Klik opnieuw om in te loggen.'; return; }
         throw e;
       }
     }
+    $('leraarStatus').textContent = '';
     await controleerLeraar(u);
-  } catch(e) { console.error(e); alert('Inloggen lukte niet: ' + (e.message || e)); }
+  } catch(e) { console.error(e); $('leraarStatus').textContent = 'Inloggen lukte niet: ' + (e.code || e.message || e); }
   finally { bezigMetInloggen = false; $('btnNaarLeraar').disabled = false; }
 };
 // terugkomen na een redirect-login
