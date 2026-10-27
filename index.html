@@ -8,6 +8,7 @@
 <script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-database-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-auth-compat.js"></script>
 <style>
 :root{
   --bg:#eef5ee; --paneel:#ffffff; --tekst:#1f2d24; --zacht:#5d6f63; --lijn:#d3e2d6;
@@ -173,6 +174,8 @@ td.k{background:var(--groen);color:#fff}td.b{background:var(--geel)}
       <h3>Klas</h3>
       <input id="lKlas" placeholder="klascode, bijv. groep56linde">
       <button class="knop" id="btnLKlasLaden">Klas laden / aanmaken</button>
+      <button class="knop2" id="btnLCodeMaak">🎲 Nieuwe veilige code</button>
+      <p style="color:var(--zacht);font-size:.9rem;margin:6px 0 0">De klascode werkt als wachtwoord voor de klas. Kies iets wat niet te raden is.</p>
       <h3 style="margin-top:18px">Klassenlijst</h3>
       <p style="color:var(--zacht);margin-top:0">Eén voornaam per regel. Bestaand werk blijft bewaard zolang de naam hetzelfde blijft.</p>
       <textarea id="lNamen"></textarea>
@@ -216,7 +219,7 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "153441189918",
   appId: "1:153441189918:web:367e40093bc610850d2e0f"
 };
-const LERAAR_PIN = "1234";   // pincode voor het leraarsscherm
+const LERAAR_EMAIL = "a.marks@levwn.nl";   // Google-account van de leraar (moet gelijk zijn aan database.rules.json)
 const CANVAS = 460;
 
 /* =====================================================================
@@ -587,15 +590,35 @@ function toonFout(e){
 }
 
 /* ============================ LERAAR ============================ */
-$('btnNaarLeraar').onclick = () => {
-  const p = prompt('Pincode leraar:');
-  if (p === null) return;
-  if (p !== LERAAR_PIN) { alert('Verkeerde pincode.'); return; }
+function naarLeraarScherm(){
   $('lKlas').value = localStorage.getItem('sp_klas') || '';
   toon('scrLeraar');
   if ($('lKlas').value) $('btnLKlasLaden').click();
+}
+$('btnNaarLeraar').onclick = async () => {
+  if (DEMO) { naarLeraarScherm(); return; }
+  try {
+    const auth = firebase.auth();
+    let u = auth.currentUser;
+    if (!u) {
+      const prov = new firebase.auth.GoogleAuthProvider();
+      prov.setCustomParameters({ prompt: 'select_account', login_hint: LERAAR_EMAIL });
+      u = (await auth.signInWithPopup(prov)).user;
+    }
+    if ((u.email || '').toLowerCase() !== LERAAR_EMAIL.toLowerCase()) {
+      await auth.signOut();
+      alert('Dit account heeft geen toegang tot het leraarsscherm.');
+      return;
+    }
+    naarLeraarScherm();
+  } catch(e) { console.error(e); alert('Inloggen lukte niet: ' + (e.message || e)); }
 };
-$('btnLeraarUit').onclick = () => toon('scrLogin');
+$('btnLeraarUit').onclick = async () => { if (!DEMO) await firebase.auth().signOut(); toon('scrLogin'); };
+$('btnLCodeMaak').onclick = () => {
+  const w = ['kraai','vos','uil','das','egel','haas','reiger','otter','mol','specht','lynx','bever'];
+  const r = n => Math.floor(Math.random() * n);
+  $('lKlas').value = 'linde-' + w[r(w.length)] + r(90 + 10) + '-' + w[r(w.length)] + r(90 + 10);
+};
 let L = { klas:null, leerlingen:{} };
 $('btnLKlasLaden').onclick = async () => {
   const code = schoon($('lKlas').value);
@@ -604,6 +627,7 @@ $('btnLKlasLaden').onclick = async () => {
   L.leerlingen = await dbGet(`turtle/klassen/${code}/leerlingen`) || {};
   $('lNamen').value = Object.values(L.leerlingen).map(x => x.naam).sort((a, b) => a.localeCompare(b, 'nl')).join('\n');
   $('lMelding').textContent = Object.keys(L.leerlingen).length ? '' : 'Nieuwe klas — vul de namen in en sla op.';
+  if (code.length < 10) $('lMelding').textContent += ' Let op: deze code is kort en makkelijk te raden.';
   laadOverzicht();
 };
 $('btnLNamenOpslaan').onclick = async () => {

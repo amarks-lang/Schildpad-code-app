@@ -1,8 +1,30 @@
 {
   "rules": {
     "turtle": {
-      ".read": true,
-      ".write": true
+      "klassen": {
+        "$klas": {
+          "leerlingen": {
+            ".read": true,
+            ".write": "auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'a.marks@levwn.nl'"
+          },
+          "werk": {
+            ".read": true,
+            "$lid": {
+              ".write": "root.child('turtle/klassen/' + $klas + '/leerlingen/' + $lid).exists() || (auth != null && auth.token.email_verified == true && auth.token.email.toLowerCase() == 'a.marks@levwn.nl')",
+              "lessen": {
+                "$les": {
+                  ".validate": "newData.hasChildren(['code']) && newData.child('code').isString() && newData.child('code').val().length < 50000"
+                }
+              },
+              "vrij": {
+                "$pid": {
+                  ".validate": "newData.hasChildren(['naam', 'code']) && newData.child('code').isString() && newData.child('code').val().length < 50000"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
