@@ -70,6 +70,9 @@ input,textarea{font:inherit}
 .foutvak b{color:var(--rood)}
 .uitvoer{background:var(--paneel);border-radius:10px;padding:8px 12px;font-family:Consolas,monospace;white-space:pre-wrap;max-height:120px;overflow:auto}
 .klaarknop.klaar{background:var(--geel-r);color:var(--tekst)}
+.checkvak{border-radius:10px;padding:10px 12px;line-height:1.45;border:2px solid}
+.checkvak.goed{background:var(--groen-l);border-color:var(--groen)}
+.checkvak.bijna{background:var(--geel);border-color:var(--geel-r)}
 /* leraar */
 #scrLeraar{flex-direction:column}
 .lerarinhoud{padding:16px;overflow:auto;display:grid;grid-template-columns:340px 1fr;gap:16px;flex:1;min-height:0}
@@ -154,8 +157,9 @@ td.k{background:var(--groen);color:#fff}td.b{background:var(--geel)}
         <button class="knop" id="btnRun">▶ Uitvoeren</button>
         <button class="knop2" id="btnStop">■ Stop</button>
         <button class="knop2" id="btnReset">↺ Opnieuw beginnen</button>
-        <button class="knop2 klaarknop" id="btnKlaar">✓ Klaar!</button>
+        <button class="knop2 klaarknop" id="btnKlaar">✓ Klaar? Controleer!</button>
       </div>
+      <div class="checkvak" id="checkVak" hidden></div>
       <div class="tekenvak" id="tekenSlot"><div id="turtleCanvas"></div></div>
       <div class="foutvak" id="foutVak" hidden></div>
       <div class="uitvoer" id="uitvoer" hidden></div>
@@ -196,6 +200,7 @@ td.k{background:var(--groen);color:#fff}td.b{background:var(--geel)}
   <div class="modalkaart">
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
       <h3 id="modalTitel" style="margin:0;flex:1"></h3>
+      <button class="knop2" id="btnModalKlaar" hidden></button>
       <button class="knop" id="btnModalRun">▶ Uitvoeren</button>
       <button class="knop2" id="btnModalSluit">Sluiten</button>
     </div>
@@ -319,6 +324,175 @@ const LESSEN = [
 ];
 const VRIJ_START = KOP + '# Teken hier wat je maar wilt!\n';
 
+/* =====================================================================
+   CONTROLE — de app houdt bij wat de schildpad tekent (via PRELUDE)
+   en kijkt per les of de tekening en de code kloppen.
+   ===================================================================== */
+const PRELUDE = `import turtle as _tt
+_spoor = []
+if not hasattr(_tt, '_Orig'):
+    _tt._Orig = _tt.Turtle
+class _T(_tt._Orig):
+    pass
+def _mv(naam):
+    orig = getattr(_tt._Orig, naam)
+    def f(self, *a):
+        x1 = self.xcor()
+        y1 = self.ycor()
+        r = orig(self, *a)
+        _spoor.append(['seg', x1, y1, self.xcor(), self.ycor(), self.isdown(), str(self.pencolor()), self.pensize()])
+        return r
+    return f
+for _n in ['forward', 'fd', 'backward', 'bk', 'back', 'goto', 'setpos', 'setposition', 'setx', 'sety', 'home']:
+    if hasattr(_tt._Orig, _n):
+        setattr(_T, _n, _mv(_n))
+def _circ(self, *a):
+    _spoor.append(['circle', a[0] if len(a) > 0 else 0, self.isdown()])
+    return _tt._Orig.circle(self, *a)
+def _bf(self, *a):
+    _spoor.append(['fill_begin'])
+    return _tt._Orig.begin_fill(self, *a)
+def _ef(self, *a):
+    _spoor.append(['fill_end', str(self.fillcolor())])
+    return _tt._Orig.end_fill(self, *a)
+_T.circle = _circ
+_T.begin_fill = _bf
+_T.end_fill = _ef
+_tt.Turtle = _T
+`;
+const PRE_REGELS = PRELUDE.split('\n').length - 1;
+
+function hoekVerschil(a, b){ let d = (b - a) * 180 / Math.PI; while (d > 180) d -= 360; while (d <= -180) d += 360; return d; }
+function maakZijden(segs, gesloten){
+  const z = [];
+  for (const s of segs) {
+    const hoek = Math.atan2(s.y2 - s.y1, s.x2 - s.x1);
+    const vorige = z[z.length - 1];
+    if (vorige && Math.abs(hoekVerschil(vorige.hoek, hoek)) < 2) vorige.len += s.len;
+    else z.push({ hoek, len: s.len, kleur: s.kleur });
+  }
+  if (gesloten && z.length > 1 && Math.abs(hoekVerschil(z[0].hoek, z[z.length - 1].hoek)) < 2) z[0].len += z.pop().len;
+  const draai = [];
+  for (let i = 0; i < z.length - 1; i++) draai.push(hoekVerschil(z[i].hoek, z[i + 1].hoek));
+  if (gesloten && z.length > 1) draai.push(hoekVerschil(z[z.length - 1].hoek, z[0].hoek));
+  const gem = z.reduce((a, b) => a + b.len, 0) / (z.length || 1);
+  return { zijden: z, draai, gem };
+}
+function analyseer(spoor, codeRuw){
+  const dicht = (a, b, tol) => Math.abs(a - b) <= (tol || 1);
+  const moves = spoor.filter(s => s[0] === 'seg').map(s => ({ x1: s[1], y1: s[2], x2: s[3], y2: s[4], down: !!s[5], kleur: s[6], len: Math.hypot(s[3] - s[1], s[4] - s[2]) }));
+  const lijnen = moves.filter(m => m.down && m.len > 0.5);
+  const vormen = [], open = [];
+  let k = [];
+  const sluit = () => { if (k.length) open.push(maakZijden(k, false)); k = []; };
+  for (const m of moves) {
+    if (m.len <= 0.5) continue;
+    if (!m.down) { sluit(); continue; }
+    const laatste = k[k.length - 1];
+    if (laatste && !(dicht(laatste.x2, m.x1) && dicht(laatste.y2, m.y1))) sluit();
+    k.push(m);
+    if (k.length >= 3 && dicht(m.x2, k[0].x1, 2) && dicht(m.y2, k[0].y1, 2)) { vormen.push(maakZijden(k, true)); k = []; }
+  }
+  sluit();
+  // inkleuren
+  const vullingen = []; let telLijnen = 0, start = null;
+  for (const s of spoor) {
+    if (s[0] === 'seg' && s[5] && Math.hypot(s[3] - s[1], s[4] - s[2]) > 0.5) telLijnen++;
+    if (s[0] === 'fill_begin') start = telLijnen;
+    if (s[0] === 'fill_end' && start !== null) { vullingen.push({ kleur: s[1], lijnen: telLijnen - start }); start = null; }
+  }
+  const code = codeRuw.split('\n').map(r => r.replace(/#.*$/, '')).join('\n');
+  const defs = [...code.matchAll(/^\s*def\s+(\w+)\s*\(([^)]*)\)/gm)].map(m => ({ naam: m[1], params: m[2].trim() }));
+  const aanroepen = naam => (code.match(new RegExp('\\b' + naam + '\\s*\\(', 'g')) || []).length - (code.match(new RegExp('def\\s+' + naam + '\\s*\\(', 'g')) || []).length;
+  const regelmatig = n => vormen.filter(v => v.zijden.length === n
+      && v.zijden.every(z => Math.abs(z.len - v.gem) <= Math.max(2, v.gem * 0.06))
+      && v.draai.every(d => Math.abs(Math.abs(d) - 360 / n) <= 4));
+  const alleKettingen = vormen.concat(open);
+  return {
+    lijnen, vormen, open, vullingen, defs, aanroepen, regelmatig, code,
+    heeft: re => re.test(code),
+    penUp: moves.some(m => !m.down && m.len > 1),
+    cirkels: spoor.filter(s => s[0] === 'circle' && s[2]).length,
+    langste: Math.max(0, ...alleKettingen.flatMap(v => v.zijden.map(z => z.len))),
+    rechteHoek: alleKettingen.some(v => v.draai.some(d => Math.abs(Math.abs(d) - 90) <= 4)),
+    meesteAanroepen: Math.max(0, ...defs.map(d => aanroepen(d.naam)))
+  };
+}
+const FOR = /\bfor\b[^\n]*:/;
+const zonderSpaties = s => s.replace(/\s+/g, '');
+const CHECKS = {
+  l01: A => A.langste < 195 ? { tip: 'Maak de lijn 200 stapjes lang: <code>t.forward(200)</code>.' }
+        : !A.heeft(/\b(backward|bk|back)\s*\(/) ? { tip: 'Lijn van 200 gelukt! Laat hem nu nog 50 stapjes achteruit lopen met <code>t.backward(50)</code>.' } : { ok: true },
+  l02: A => A.rechteHoek ? { ok: true } : { tip: 'Ik zie nog geen hoek van 90 graden. Draai met <code>t.left(90)</code> of <code>t.right(90)</code> en loop daarna weer vooruit.' },
+  l03: A => {
+    const vk = A.regelmatig(4);
+    if (vk.some(v => Math.abs(v.gem - 100) <= 5)) return { ok: true };
+    if (vk.length) return { tip: 'Mooi vierkant! Maar de kanten moeten 100 lang zijn.' };
+    if (A.vormen.some(v => v.zijden.length === 4)) return { tip: 'Je vorm heeft 4 kanten, maar ze zijn niet allemaal even lang of de hoeken zijn niet recht.' };
+    return { tip: 'Ik zie nog geen gesloten vierkant. Loop 4 keer vooruit en draai steeds 90 graden. Komt de schildpad weer bij het begin uit?' };
+  },
+  l04: A => !A.heeft(FOR) ? { tip: 'Gebruik een for-lus: <code>for i in range(4):</code>' }
+        : A.regelmatig(4).length ? { ok: true } : { tip: 'De lus is er, maar er komt nog geen vierkant uit. Staan <code>forward</code> én <code>left</code> allebei ingesprongen onder de <code>for</code>?' },
+  l05: A => {
+    const zes = A.regelmatig(6).length, drie = A.regelmatig(3).length;
+    if (zes && A.heeft(FOR)) return { ok: true };
+    if (zes) return { tip: 'Zeshoek gelukt! Kun je hem ook maken met een <code>for</code>-lus?' };
+    if (drie) return { tip: 'Driehoek gelukt! Maak nu ook de zeshoek. Hoeveel is 360 ÷ 6?' };
+    return { tip: 'Ik zie nog geen driehoek of zeshoek. Tip: de schildpad draait 360 ÷ het aantal hoeken.' };
+  },
+  l06: A => {
+    const vier = A.vormen.filter(v => v.zijden.length === 4);
+    if (vier.some(v => new Set(v.zijden.map(z => z.kleur)).size >= 4)) return { ok: true };
+    return vier.length ? { tip: 'Je vierkant staat er! Geef nu elke kant een andere kleur: zet <code>t.color(...)</code> vóór elke <code>t.forward</code>.' }
+                       : { tip: 'Teken eerst een vierkant, en geef elke kant een eigen kleur.' };
+  },
+  l07: A => {
+    const n = A.regelmatig(4).length;
+    if (n >= 3 && A.penUp) return { ok: true };
+    if (n >= 3) return { tip: 'Drie vierkanten! Maar ze hangen nog aan elkaar. Gebruik <code>t.penup()</code> en <code>t.pendown()</code>.' };
+    return { tip: `Ik tel ${n} vierkant${n === 1 ? '' : 'en'}. Er moeten er 3 naast elkaar staan.` };
+  },
+  l08: A => {
+    const v = A.vullingen.filter(x => x.lijnen >= 3);
+    if (!v.length) return { tip: 'Ik zie nog geen ingekleurde vorm. Zet <code>t.begin_fill()</code> vóór je vierkant en <code>t.end_fill()</code> erna.' };
+    return v.some(x => /yellow|gold|ff0|ffff00|255, ?255, ?0/i.test(x.kleur)) ? { ok: true } : { tip: 'Ingekleurd! Maar de opdracht was geel: <code>t.fillcolor("yellow")</code>.' };
+  },
+  l09: A => {
+    const m = [...A.code.matchAll(/\bzijde\s*=\s*(\d+(?:\.\d+)?)/g)].pop();
+    if (!m) return { tip: 'Gebruik de variabele: <code>zijde = ...</code>' };
+    const z = parseFloat(m[1]);
+    if (z === 80) return { tip: 'Verander het getal achter <code>zijde =</code> in een ander getal en voer opnieuw uit.' };
+    return A.regelmatig(4).some(v => Math.abs(v.gem - z) <= 3) ? { ok: true } : { tip: 'Gebruik je <code>t.forward(zijde)</code> in de lus? Het vierkant moet even groot worden als <code>zijde</code>.' };
+  },
+  l10: A => {
+    if (!A.defs.length) return { tip: 'Maak je eigen commando met <code>def vierkant():</code>' };
+    const n = A.regelmatig(4).length;
+    return n >= 3 ? { ok: true } : { tip: `Ik tel ${n} vierkant${n === 1 ? '' : 'en'}. Roep je commando 3 keer aan, met <code>t.penup()</code> en <code>t.forward()</code> ertussen.` };
+  },
+  l11: A => {
+    if (!A.defs.some(d => d.params)) return { tip: 'Geef je commando een getal mee: <code>def vierkant(zijde):</code>' };
+    const maten = new Set(A.regelmatig(4).map(v => Math.round(v.gem)));
+    return maten.size >= 5 ? { ok: true } : { tip: `Ik zie ${maten.size} verschillende maten vierkanten. Er moeten er 5 komen die steeds groter worden.` };
+  },
+  l12: A => {
+    if (!A.defs.length) return { tip: 'Maak het commando <code>kanteel()</code> met <code>def</code>.' };
+    return A.lijnen.length >= 20 && (A.heeft(FOR) || A.meesteAanroepen >= 5) ? { ok: true }
+      : { tip: 'Ik zie nog geen rij van 5 kantelen. Roep <code>kanteel()</code> 5 keer aan, of nog slimmer: met een <code>for</code>-lus.' };
+  },
+  l13: A => {
+    if (!A.defs.length) return { tip: 'Gebruik minstens één eigen commando (<code>def</code>), bijvoorbeeld voor een toren.' };
+    if (!A.vullingen.some(x => x.lijnen >= 3)) return { tip: 'Je kasteel heeft nog een gevulde poort nodig: <code>begin_fill()</code> en <code>end_fill()</code>.' };
+    if (A.lijnen.length < 30) return { tip: 'Je kasteel is nog wat klein. Muur met kantelen, minstens twee torens en een poort!' };
+    return { ok: true, extra: 'Laat je kasteel ook even aan je juf of meester zien!' };
+  },
+  l14: (A, les) => {
+    if (zonderSpaties(A.code) === zonderSpaties(les.start.split('\n').map(r => r.replace(/#.*$/, '')).join('\n'))) return { tip: 'Verander eerst een getal, bijvoorbeeld 91 in 89, en kijk wat er gebeurt.' };
+    return A.lijnen.length >= 50 && A.heeft(FOR) ? { ok: true } : { tip: 'Ik zie nog geen spiraal. Gebruik een <code>for</code>-lus waarin de schildpad steeds een stukje verder loopt.' };
+  },
+  l15: A => A.cirkels >= 12 && A.heeft(FOR) ? { ok: true } : { tip: `Ik tel ${A.cirkels} cirkel${A.cirkels === 1 ? '' : 's'}. Een bloem heeft er minstens 12, gemaakt met een <code>for</code>-lus.` }
+};
+function toonCheck(soort, html){ const v = $('checkVak'); v.className = 'checkvak ' + soort; v.innerHTML = html; v.hidden = false; }
+
 /* ============================ DATABASE ============================ */
 const DEMO = !FIREBASE_CONFIG.apiKey || FIREBASE_CONFIG.apiKey === 'VUL_IN';
 let fb = null;
@@ -340,6 +514,10 @@ async function dbSet(p, v){
   ks.slice(0, -1).forEach(k => { if (typeof d[k] !== 'object' || d[k] === null) d[k] = {}; d = d[k]; });
   if (v === null) delete d[ks[ks.length-1]]; else d[ks[ks.length-1]] = v;
   lokaal.bewaar(root);
+}
+async function dbUpdate(p, obj){
+  if (fb) return fb.ref(p).update(obj);
+  for (const k in obj) await dbSet(p + '/' + k, obj[k]);
 }
 // noodkopie per leerling (handig als wifi even wegvalt)
 function backup(sleutel, waarde){ try { localStorage.setItem('sp_bk_' + sleutel, JSON.stringify(waarde)); } catch(e){} }
@@ -465,19 +643,35 @@ async function openItem(type, id){
     $('btnKlaar').hidden = true; $('btnReset').hidden = true;
   }
   ed.scrollTop = 0;
-  werkGutterBij(); toonFout(null); $('uitvoer').hidden = true;
+  werkGutterBij(); toonFout(null); $('uitvoer').hidden = true; $('checkVak').hidden = true;
   tekenZijbalk();
   runCode(ed.value);
 }
-function zetKlaarKnop(k){ const b = $('btnKlaar'); b.classList.toggle('klaar', k); b.textContent = k ? '★ Klaar!' : '✓ Klaar!'; }
+function zetKlaarKnop(k){ const b = $('btnKlaar'); b.classList.toggle('klaar', k); b.textContent = k ? '★ Klaar!' : '✓ Klaar? Controleer!'; }
 
 $('btnKlaar').onclick = async () => {
   if (S.type !== 'les') return;
-  const w = S.werk.lessen[S.itemId] || { code: $('editor').value };
-  w.klaar = !w.klaar; w.code = $('editor').value; w.t = Date.now();
-  S.werk.lessen[S.itemId] = w;
-  zetKlaarKnop(w.klaar); tekenZijbalk();
+  const les = LESSEN.find(l => l.id === S.itemId);
+  const code = ed.value;
   await bewaarNu(true);
+  toonCheck('bijna', '🔍 Even kijken of het klopt…');
+  const res = await runCode(code);
+  if (res.gestopt || S.itemId !== les.id) { $('checkVak').hidden = true; return; }
+  if (!res.ok) { toonCheck('bijna', 'Je code heeft nog een fout. Los die eerst op, dan kijk ik of de opdracht klopt.'); return; }
+  const check = CHECKS[les.id] || (() => ({ ok: true }));
+  let uit;
+  try { uit = check(analyseer(res.spoor, code), les); } catch(e) { console.error(e); uit = { ok: true }; }
+  if (!uit.ok) { toonCheck('bijna', '<b>Bijna!</b> ' + uit.tip); return; }
+  const t = Date.now();
+  const w = Object.assign({}, S.werk.lessen[les.id] || {}, { code, t, klaar: true });
+  S.werk.lessen[les.id] = w;
+  backup(`${S.klas}/${S.leerling.id}/lessen/${les.id}`, w);
+  zetKlaarKnop(true); tekenZijbalk();
+  try { await dbUpdate(`${werkPad()}/lessen/${les.id}`, { code, t, klaar: true }); zetStatus('Opgeslagen ✓'); }
+  catch(e) { console.error(e); zetStatus('⚠ Niet online opgeslagen — lokaal bewaard'); }
+  toonCheck('goed', '<b>Goed gedaan! 🎉</b> Les ' + (LESSEN.indexOf(les) + 1) + ' is klaar.'
+    + (uit.extra ? ' ' + uit.extra : '')
+    + (les.uitdaging ? '<br>Zin in meer? Probeer de ⭐ uitdaging.' : ''));
 };
 $('btnReset').onclick = () => {
   if (S.type !== 'les') return;
@@ -501,14 +695,16 @@ async function bewaarNu(forceer){
   let p, obj;
   if (S.type === 'les') {
     obj = Object.assign({}, S.werk.lessen[S.itemId] || {}, { code, t });
-    obj.klaar = !!obj.klaar;
     S.werk.lessen[S.itemId] = obj; p = `lessen/${S.itemId}`;
   } else {
     if (!S.werk.vrij[S.itemId]) return;
     obj = Object.assign(S.werk.vrij[S.itemId], { code, t }); p = `vrij/${S.itemId}`;
   }
   backup(`${S.klas}/${S.leerling.id}/${p}`, obj);
-  try { await dbSet(`${werkPad()}/${p}`, obj); zetStatus(DEMO ? 'Bewaard (alleen deze browser)' : 'Opgeslagen ✓'); }
+  try {
+    // bij lessen alleen code en tijd bijwerken, zodat 'klaar' (ook van de leraar) blijft staan
+    if (S.type === 'les') await dbUpdate(`${werkPad()}/${p}`, { code, t }); else await dbSet(`${werkPad()}/${p}`, obj);
+    zetStatus(DEMO ? 'Bewaard (alleen deze browser)' : 'Opgeslagen ✓'); }
   catch(e){ zetStatus('⚠ Niet online opgeslagen — lokaal bewaard'); console.error(e); }
 }
 window.addEventListener('beforeunload', () => { if (S.saveTimer) bewaarNu(true); });
@@ -547,13 +743,14 @@ ed.addEventListener('keydown', e => {
 });
 
 /* ============================ PYTHON (Skulpt) ============================ */
-let bezig = false, stopGevraagd = false;
+let bezig = false, stopGevraagd = false, runId = 0;
 function leesBestand(x){
   if (Sk.builtinFiles === undefined || Sk.builtinFiles.files[x] === undefined) throw "Bestand niet gevonden: '" + x + "'";
   return Sk.builtinFiles.files[x];
 }
 async function runCode(code){
   if (bezig) { stopCode(); await new Promise(r => setTimeout(r, 80)); }
+  const mijnRun = ++runId;
   $('uitvoer').textContent = ''; $('uitvoer').hidden = true; toonFout(null);
   Sk.hardInterrupt = false; stopGevraagd = false;
   Sk.configure({
@@ -566,9 +763,18 @@ async function runCode(code){
   Sk.TurtleGraphics.width = CANVAS; Sk.TurtleGraphics.height = CANVAS;
   if (Sk.TurtleGraphics.reset) Sk.TurtleGraphics.reset();
   bezig = true; $('btnRun').textContent = '⏳ Bezig…';
-  try { await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody('<stdin>', false, code, true)); }
-  catch(e){ if (!stopGevraagd) toonFout(e); }
-  finally { bezig = false; $('btnRun').textContent = '▶ Uitvoeren'; }
+  try {
+    const mod = await Sk.misceval.asyncToPromise(() => Sk.importMainWithBody('<stdin>', false, PRELUDE + code, true));
+    let spoor = [];
+    try { spoor = Sk.ffi.remapToJs(mod.$d._spoor) || []; } catch(e) { console.error(e); }
+    return { ok: true, spoor };
+  }
+  catch(e){
+    const gestopt = stopGevraagd || mijnRun !== runId;
+    if (!gestopt) toonFout(e);
+    return { ok: false, gestopt };
+  }
+  finally { if (mijnRun === runId) { bezig = false; $('btnRun').textContent = '▶ Uitvoeren'; } }
 }
 function stopCode(){ if (bezig) { stopGevraagd = true; Sk.hardInterrupt = true; } }
 $('btnRun').onclick = () => { bewaarNu(true); runCode(ed.value); };
@@ -588,9 +794,11 @@ function toonFout(e){
   if (!e) { v.hidden = true; werkGutterBij(); return; }
   const naam = e.tp$name || (e.constructor && e.constructor.name) || 'Fout';
   let regel = null;
-  if (e.traceback && e.traceback.length) regel = e.traceback[0].lineno;
+  if (e.traceback && e.traceback.length) regel = e.traceback[0].lineno - PRE_REGELS;
+  if (!(regel >= 1)) regel = null;
   const tip = TIPS[naam] || 'Kijk nog eens goed naar de regel die rood is.';
-  v.innerHTML = `<b>Oeps! ${regel ? 'Fout in regel ' + regel : 'Er ging iets mis'}</b><br>${tip}<br><small style="color:var(--zacht)">${esc(String(e))}</small>`;
+  const tekst = String(e).replace(/line (\d+)/g, (m, n) => 'line ' + (n - PRE_REGELS));
+  v.innerHTML = `<b>Oeps! ${regel ? 'Fout in regel ' + regel : 'Er ging iets mis'}</b><br>${tip}<br><small style="color:var(--zacht)">${esc(tekst)}</small>`;
   v.hidden = false;
   werkGutterBij(regel);
 }
@@ -691,7 +899,7 @@ async function laadOverzicht(){
     const x = ((L_werk[td.dataset.lid] || {}).lessen || {})[td.dataset.les];
     if (!x) return;
     const les = LESSEN.find(l => l.id === td.dataset.les);
-    openModal(`${L.leerlingen[td.dataset.lid].naam} — Les ${LESSEN.indexOf(les) + 1}: ${les.titel}`, x.code);
+    openModal(`${L.leerlingen[td.dataset.lid].naam} — Les ${LESSEN.indexOf(les) + 1}: ${les.titel}`, x.code, null, { lid: td.dataset.lid, les: les.id, klaar: !!x.klaar });
   });
   $('lOverzicht').querySelectorAll('td.naam').forEach(td => td.onclick = () => {
     const vrij = (L_werk[td.dataset.lid] || {}).vrij || {};
@@ -701,8 +909,22 @@ async function laadOverzicht(){
     openModal(naam + ' — eigen tekeningen', null, items);
   });
 }
-let modalCode = '';
-function openModal(titel, code, lijst){
+let modalCode = '', modalActie = null;
+function zetModalKlaarKnop(){
+  const b = $('btnModalKlaar');
+  b.hidden = !modalActie;
+  if (modalActie) b.textContent = modalActie.klaar ? '↩ Toch niet klaar' : '✓ Zet op klaar';
+}
+$('btnModalKlaar').onclick = async () => {
+  if (!modalActie) return;
+  const nieuw = !modalActie.klaar;
+  try {
+    await dbUpdate(`turtle/klassen/${L.klas}/werk/${modalActie.lid}/lessen/${modalActie.les}`, { klaar: nieuw });
+    modalActie.klaar = nieuw; zetModalKlaarKnop(); laadOverzicht();
+  } catch(e) { console.error(e); $('btnModalKlaar').textContent = '⚠ Lukte niet'; }
+};
+function openModal(titel, code, lijst, actie){
+  modalActie = actie || null; zetModalKlaarKnop();
   $('modalTitel').textContent = titel;
   const inh = $('modalInhoud');
   if (lijst) {
