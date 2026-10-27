@@ -395,7 +395,7 @@ async function startLeerling(l){
   toon('scrApp');
   $('tekenSlot').appendChild($('turtleCanvas'));
   const eerste = LESSEN.find(x => !(S.werk.lessen[x.id] || {}).klaar) || LESSEN[0];
-  open('les', eerste.id);
+  openItem('les', eerste.id);
 }
 
 /* ============================ ZIJBALK ============================ */
@@ -406,7 +406,7 @@ function tekenZijbalk(){
     const b = document.createElement('button');
     b.className = 'item' + (w.klaar ? ' klaar' : '') + (S.type === 'les' && S.itemId === les.id ? ' actief' : '');
     b.innerHTML = `<span class="nr">${w.klaar ? '✓' : i + 1}</span>${esc(les.titel)}${les.ster ? '<span class="ster">⭐</span>' : ''}`;
-    b.onclick = () => open('les', les.id);
+    b.onclick = () => openItem('les', les.id);
     ll.appendChild(b);
   });
   const vl = $('vrijLijst'); vl.innerHTML = '';
@@ -414,7 +414,7 @@ function tekenZijbalk(){
     const b = document.createElement('button');
     b.className = 'item' + (S.type === 'vrij' && S.itemId === id ? ' actief' : '');
     b.innerHTML = `<span class="nr">🎨</span>${esc(v.naam)}`;
-    b.onclick = () => open('vrij', id);
+    b.onclick = () => openItem('vrij', id);
     vl.appendChild(b);
   });
 }
@@ -425,11 +425,11 @@ $('btnNieuweTekening').onclick = async () => {
   S.werk.vrij[id] = { naam, code: VRIJ_START, t: Date.now() };
   try { await dbSet(`${werkPad()}/vrij/${id}`, S.werk.vrij[id]); }
   catch(e){ console.error(e); zetStatus('⚠ Niet online opgeslagen — lokaal bewaard'); }
-  open('vrij', id);
+  openItem('vrij', id);
 };
 
 /* ============================ OPENEN ============================ */
-async function open(type, id){
+async function openItem(type, id){
   // tekening bestaat niet (meer)? Dan terug naar de eerste les.
   if (type === 'vrij' && !S.werk.vrij[id]) { type = 'les'; id = LESSEN[0].id; }
   if (type === 'les' && !LESSEN.find(l => l.id === id)) id = LESSEN[0].id;
@@ -454,13 +454,13 @@ async function open(type, id){
       <p><button class="knop2" id="btnHernoem">Naam veranderen</button> <button class="knop2" id="btnVerwijder">Weggooien</button></p>`;
     $('btnHernoem').onclick = async () => {
       const n = (prompt('Nieuwe naam:', v.naam) || '').trim(); if (!n) return;
-      v.naam = n; await dbSet(`${werkPad()}/vrij/${id}/naam`, n); open('vrij', id);
+      v.naam = n; await dbSet(`${werkPad()}/vrij/${id}/naam`, n); openItem('vrij', id);
     };
     $('btnVerwijder').onclick = async () => {
       if (!confirm('Weet je zeker dat je "' + v.naam + '" wilt weggooien?')) return;
       delete S.werk.vrij[id]; S.itemId = null; tekenZijbalk();
       try { await dbSet(`${werkPad()}/vrij/${id}`, null); } catch(e){ console.error(e); }
-      open('les', LESSEN[0].id);
+      openItem('les', LESSEN[0].id);
     };
     $('btnKlaar').hidden = true; $('btnReset').hidden = true;
   }
