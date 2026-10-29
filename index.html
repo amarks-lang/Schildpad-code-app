@@ -333,30 +333,90 @@ const VRIJ_START = KOP + '# Teken hier wat je maar wilt!\n';
    ===================================================================== */
 const PRELUDE = `import turtle as _tt
 _spoor = []
+_MAX_SPOOR = 50000
+_VER = 2000
 if not hasattr(_tt, '_Orig'):
     _tt._Orig = _tt.Turtle
 class _T(_tt._Orig):
     pass
+def _getal(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+def _log(item):
+    if len(_spoor) < _MAX_SPOOR:
+        _spoor.append(item)
+def _doel(self, naam, a):
+    x = self.xcor()
+    y = self.ycor()
+    try:
+        if naam in ['forward', 'fd', 'backward', 'bk', 'back']:
+            return abs(a[0])
+        if naam == 'home':
+            x2 = 0
+            y2 = 0
+        elif naam == 'setx':
+            x2 = a[0]
+            y2 = y
+        elif naam == 'sety':
+            x2 = x
+            y2 = a[0]
+        elif len(a) == 1:
+            x2 = a[0][0]
+            y2 = a[0][1]
+        else:
+            x2 = a[0]
+            y2 = a[1]
+        return ((x2 - x) ** 2 + (y2 - y) ** 2) ** 0.5
+    except Exception:
+        return 0
+def _snel(self, groot, orig, a, kw):
+    if not groot:
+        return orig(self, *a, **kw)
+    sp = self.speed()
+    self.speed(0)
+    try:
+        return orig(self, *a, **kw)
+    finally:
+        self.speed(sp)
 def _mv(naam):
     orig = getattr(_tt._Orig, naam)
-    def f(self, *a):
+    def f(self, *a, **kw):
         x1 = self.xcor()
         y1 = self.ycor()
-        r = orig(self, *a)
-        _spoor.append(['seg', x1, y1, self.xcor(), self.ycor(), self.isdown(), str(self.pencolor()), self.pensize()])
+        r = _snel(self, _doel(self, naam, a) > _VER, orig, a, kw)
+        _log(['seg', x1, y1, self.xcor(), self.ycor(), self.isdown(), str(self.pencolor()), self.pensize()])
         return r
     return f
 for _n in ['forward', 'fd', 'backward', 'bk', 'back', 'goto', 'setpos', 'setposition', 'setx', 'sety', 'home']:
     if hasattr(_tt._Orig, _n):
         setattr(_T, _n, _mv(_n))
-def _circ(self, *a):
-    _spoor.append(['circle', a[0] if len(a) > 0 else 0, self.isdown()])
-    return _tt._Orig.circle(self, *a)
+def _draai(naam):
+    orig = getattr(_tt._Orig, naam)
+    def f(self, *a, **kw):
+        if len(a) > 0 and _getal(a[0]) and abs(a[0]) > 360:
+            h = abs(a[0]) % 360
+            if a[0] < 0:
+                h = -h
+            a = (h,) + tuple(a[1:])
+        return orig(self, *a, **kw)
+    return f
+for _n in ['left', 'lt', 'right', 'rt']:
+    if hasattr(_tt._Orig, _n):
+        setattr(_T, _n, _draai(_n))
+def _circ(self, *a, **kw):
+    a = list(a)
+    if len(a) > 1 and _getal(a[1]) and abs(a[1]) > 360:
+        e = 360 + abs(a[1]) % 360
+        a[1] = -e if a[1] < 0 else e
+    if len(a) > 2 and _getal(a[2]) and abs(a[2]) > 360:
+        a[2] = 360
+    _log(['circle', a[0] if len(a) > 0 else 0, self.isdown()])
+    groot = len(a) > 0 and _getal(a[0]) and abs(a[0]) > _VER
+    return _snel(self, groot, _tt._Orig.circle, a, kw)
 def _bf(self, *a):
-    _spoor.append(['fill_begin'])
+    _log(['fill_begin'])
     return _tt._Orig.begin_fill(self, *a)
 def _ef(self, *a):
-    _spoor.append(['fill_end', str(self.fillcolor())])
+    _log(['fill_end', str(self.fillcolor())])
     return _tt._Orig.end_fill(self, *a)
 _T.circle = _circ
 _T.begin_fill = _bf
@@ -653,7 +713,17 @@ async function openItem(type, id){
   ed.scrollTop = 0;
   werkGutterBij(); toonFout(null); $('uitvoer').hidden = true; $('checkVak').hidden = true;
   tekenZijbalk();
-  runCode(ed.value);
+  // Liep deze code de vorige keer vast (tab bevroren)? Dan niet automatisch starten.
+  const sleutel = [S.klas, S.leerling && S.leerling.id, type, id].join('/');
+  let vast = false;
+  try { vast = localStorage.getItem('sp_vast') === sleutel; } catch(e) {}
+  if (vast) {
+    try { localStorage.removeItem('sp_vast'); } catch(e) {}
+    toonCheck('bijna', '<b>Let op:</b> je code liep de vorige keer vast, daarom is hij nu niet vanzelf gestart. Kijk je code na en druk dan op ▶ Uitvoeren.');
+  } else {
+    try { localStorage.setItem('sp_vast', sleutel); } catch(e) {}
+    runCode(ed.value).finally(() => { try { if (localStorage.getItem('sp_vast') === sleutel) localStorage.removeItem('sp_vast'); } catch(e) {} });
+  }
 }
 function zetKlaarKnop(k){ const b = $('btnKlaar'); b.classList.toggle('klaar', k); b.textContent = k ? '★ Klaar!' : '✓ Klaar? Controleer!'; }
 
